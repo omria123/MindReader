@@ -5,6 +5,7 @@ from .utils import Listener
 DEBUG_FLAG = False
 
 
+# DONT USE
 def add_debug(prn):
 	"""
 	Add a debug functionality to the publish function
@@ -13,6 +14,7 @@ def add_debug(prn):
 	:param prn: the publish function for run_server
 	:return: the new publish function
 	"""
+
 	@contextlib.contextmanager(prn)
 	def wrapper(snapshot):
 		if DEBUG_FLAG and (not hasattr(prn, 'DEBUG') or prn.DEBUG):
@@ -23,7 +25,7 @@ def add_debug(prn):
 	return wrapper
 
 
-def run_server(host, port, publish):
+def run_server(host, port, publish=print):
 	"""
 	run server bind to host:port, read snapshots from
 	connections and publish by given function
@@ -31,9 +33,7 @@ def run_server(host, port, publish):
 	:param port: port for binding
 	:param publish: what to do with given snapshots
 	"""
-	server = Listener((host, port))
-	publish = add_debug(publish)
-	jobs = server.get_snapshots()
-	for user, snapshot in jobs:
-		publish(snapshot)
-	server.close()
+	# publish = add_debug(publish)
+
+	server = Listener((host, port), publish)
+	server.run_forever()
