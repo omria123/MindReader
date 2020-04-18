@@ -4,6 +4,9 @@ from .utils import Listener
 
 DEBUG_FLAG = False
 
+PARSABLE_FIELDS = []  # TODO: change
+BIG_DATA_FIELDS = []  # TODO: change
+
 
 # DONT USE
 def add_debug(prn):

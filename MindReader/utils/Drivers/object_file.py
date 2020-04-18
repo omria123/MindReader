@@ -1,12 +1,7 @@
-from . import driver
-
-driver('object')
-
-
 class ObjectFile:
 	"""
-	In case some special case object is needed, this driver wraps the object (which is simply the given URL)
-	The driver simply wraps the object completely.
+	In case some special case obj is needed, this driver wraps the obj (which is simply the given URL)
+	The driver simply wraps the obj completely.
 	Note that obj must serve as a fully qualified file interface
 	"""
 
@@ -23,4 +18,4 @@ class ObjectFile:
 		pass
 
 	def close(self):
-		pass
+		return self._wrapped_obj

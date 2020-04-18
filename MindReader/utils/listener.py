@@ -33,7 +33,7 @@ def upload_snapshot():
 	if user_id not in USERS:
 		return 'Your cookie isn\'t valid any more', 401
 
-	snapshot = read_object(StringIO(body), object='snapshot_protocol', scheme='object')
+	snapshot = read_object(StringIO(body), obj='snapshot_protocol', scheme='obj')
 
 	handle_snapshot(USERS[user_id], snapshot)
 	return 'Thanks!!!', 200
@@ -48,7 +48,7 @@ def login():
 	which should be used later for uploading snapshots.
 	:return: The fields available to be parsed in server side.
 	"""
-	user = read_object(request, scheme='object', object='user')
+	user = read_object(request, scheme='obj', obj='user')
 	session['UserId'] = user.user_id
 	USERS[user.user_id] = user
 	return json.dumps(PARSABLE_FIELDS), 200

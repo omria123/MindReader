@@ -3,12 +3,13 @@ import struct
 
 from . import Drivers
 
-from .cortex_pb2 import User, Snapshot
-from .cortex_pb2 import Snapshot as SnapshotNet  # The protocol might change and the client-server encoding should
+from .protobuf.cortex_pb2 import User, Snapshot
+from .protobuf.cortex_pb2 import Snapshot as SnapshotNet
 
-# be different from the reader Snapshot
+# The server-client protocol might change, and the sample format can easily vary.
+# This is the reason for the distinction of Snapshot and SnapshotNet although that currently they are the same.
 
-DEFAUlLT_WRITER = 'json'
+DEFAULT_WRITER = 'json'
 
 DEFAULT_WRITERS = {'sample': 'protobuf', 'user': 'json', 'snapshot_protocol': 'protobuf'}
 
@@ -20,17 +21,17 @@ _writers = {}
 ##########################
 # Exported API
 ##########################
-def write_object(url, *args, scheme=None, write_format=None, object=None, **kwargs):
+def write_object(url, *args, scheme=None, write_format=None, obj=None, **kwargs):
 	"""
-	Writes an object from the given url.
+	Writes an obj from the given url.
 	Optional: Writes the file in respect to a given scheme encoded in the url.
 	:param url: URL which we should write to.
 	:param args, kwargs: Data to pass to the specific writer
 	:param scheme: Optional - scheme which chooses driver. Can also be integrated in the URL.
-	:param object: Optional - The writers are divides to themes, but there can also be fast accessed fast
+	:param obj: Optional - The writers are divides to themes, but there can also be fast accessed fast
 	if they have no theme (It's simply nicer to organize, for example have 3 types of sample writers).
 	:param write_format: Optional - Customize writer to writer from.
-	:return: An object which is writer directly by the writer.
+	:return: An obj which is writer directly by the writer.
 	"""
 	if scheme is not None:
 		scheme = Drivers.DEFAULT_SCHEME
@@ -39,9 +40,9 @@ def write_object(url, *args, scheme=None, write_format=None, object=None, **kwar
 
 	driver = Drivers.find_driver(scheme)
 	if write_format is None:
-		write_format = DEFAULT_WRITERS[object]
+		write_format = DEFAULT_WRITERS[obj]
 
-	return _writers[(object, write_format)](url, driver, *args, **kwargs)
+	return _writers[(obj, write_format)](url, driver, *args, **kwargs)
 
 
 def sample_writer(version):
@@ -86,7 +87,7 @@ def write_json(url, driver, data):
 	"""
 	fd = driver(url, 'wb')
 	if hasattr(data, 'json'):
-		fd.write(data.json())  # If the object has inner implementation
+		fd.write(data.json())  # If the obj has inner implementation
 	else:
 		json.dump(data, fd)
 	return fd.close()
@@ -114,10 +115,10 @@ def write_post(url, driver, body, *, headers=None):
 @writer(('user', 'json'))
 def write_user_json(url, driver, user):
 	"""
-	Write the user object in json format to the url with the given driver.
+	Write the user obj in json format to the url with the given driver.
 	:param url: URL to write to.
 	:param driver: Driver which should be used for writing
-	:param user: User object which should be converted to JSON.
+	:param user: User obj which should be converted to JSON.
 	"""
 	# Naive attempt:
 	try:
@@ -139,33 +140,35 @@ def write_snapshot_protocol_protobuf(url, driver, snapshot, fields, *, headers=N
 
 	:param url: The URL which the snapshot is written to.
 	:param driver: The driver used to access the URL for writing.
-	:param snapshot: Snapshot object which should be written.
-	:param fields: Filtering on the snapshot object's fields.
+	:param snapshot: Snapshot obj which should be written.
+	:param fields: Filtering on the snapshot obj's fields.
 	:param headers: Optional - For HTTP support, we add insertion of headers.
 	:return: The response of the writing for supporting drivers which return values in the close. (Like the HTTP driver)
 	"""
-	ess_snapshot = SnapshotNet()
 	fd = driver(url, 'wb')
-	for field in fields:
-		if hasattr(snapshot, field):
-			setattr(ess_snapshot, field, getattr(snapshot, field))
+	snapshot = create_copy(snapshot, fields, SnapshotNet)
 	generic_write_headers(fd, headers)
-	fd.write(ess_snapshot.SerializeToString())
+	fd.write(snapshot.SerializeToString())
 	return fd.close()
 
 
 @sample_writer('protobuf')
-def write_protobuf_sample(url, driver, sample):
+def write_protobuf_sample(url, driver, user, snapshots):
 	"""
 	Writes the Sample, with the injected driver interface
-	:param sample: Sample object which should be written.
-	:param url: URL to give the driver (where to write to)
-	:param driver: Injected driver which decides how to access the url
+	:param url: URL to give the driver (where to write to).
+	:param driver: Injected driver which decides how to access the url.
+	:param user: The User who delivered the snapshots.
+	:param snapshots: Iterable of snapshots.
 	:return:
 	"""
 	with driver(url, 'wb') as fd:
-		fd.write(sample.user.SerializeToString())
-		for snapshot in sample.snapshots:
+		if not isinstance(user, User):
+			user = create_copy(user, User.DESCRIPTOR.fields_by_name.keys(), User)
+		fd.write(user.SerializeToString())
+		for snapshot in snapshots:
+			if not isinstance(Snapshot, Snapshot):
+				snapshot = create_copy(snapshot, Snapshot.DESCRIPTOR.fields_by_name.key(), target_class=Snapshot)
 			fd.write(snapshot)
 
 
@@ -178,7 +181,7 @@ def write_messages(fd, strings, *, close_fd=True):
 	A message is in format of (32 bit of unsigned length) | (message_bytes)
 	Note: By default this function is responsible to close the fd, since it's being as a co-routine, it may take a while
 	(In code terms) until it closes. This can be overridden inserting close_fd=False
-	:param fd: A file like object with write functionality
+	:param fd: A file like obj with write functionality
 	:param strings: An iterable of strings which should be transformed
 	:param close_fd: Whether or not to close the file when finished
 	:return: iterator of messages
@@ -197,8 +200,8 @@ def generic_write_headers(fd, headers, mode='wb'):
 	"""
 	Writes headers if they exists (not None) to the file, according to wb.
 	If the file descriptor's driver supports `write_headers` functionality, it would be used.
-	Otherwise the function will write the headers as the native str of the object headers.
-	:param fd: Some file-like object opened in write mode.
+	Otherwise the function will write the headers as the native str of the obj headers.
+	:param fd: Some file-like obj opened in write mode.
 	:param headers: headers which should be written
 	:param mode: The mode of writing
 	"""
@@ -210,3 +213,20 @@ def generic_write_headers(fd, headers, mode='wb'):
 			if 'b' in mode:
 				headers_string = headers.encode()
 			fd.write(headers_string)
+
+
+def create_copy(obj, fields, target_class, *args, **kwargs):
+	"""
+	Copy the obj's attributes, to new instance of the target_class
+	:param obj: Object to copy.
+	:param fields: The fields which should be copied.
+	:param target_class: Class which construct the new copy.
+	:param args, kwargs: Arguments to the constructor of target_class.
+	:return: New object of type target_class, which contains the attrs of obj
+	"""
+	new_obj = target_class(*args, **kwargs)
+
+	for field in fields:
+		if hasattr(obj, field):
+			setattr(new_obj, field, getattr(obj, field))
+	return new_obj

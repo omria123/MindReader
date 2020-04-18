@@ -2,7 +2,7 @@ from io import BytesIO, StringIO
 
 import requests
 
-from . import driver
+from .driver_manager import driver
 
 
 @driver('http')
@@ -10,7 +10,7 @@ class HTTPDriver:
 	"""
 	Driver for reading and writing from remote HTTP server. (Available also as context manager)
 	Reading - Given a URL, sending GET request and read file from remote host.
-	Then the object will export all the available functionality of the response. (Using getattr)
+	Then the obj will export all the available functionality of the response. (Using getattr)
 	The read functionality is still available, and reads directly from the body of the response.
 
 	Writing - returning a fake file which collects the body of the post request
@@ -20,7 +20,7 @@ class HTTPDriver:
 	instance.response - Once every request is sent, the response is exported via this attribute.
 	flush - Send the request which is available so far (apply to  write mode only).
 	writing headers -  Can be done though write_headers or even though the native write, by sending it non string/bytes
-	object.
+	obj.
 	"""
 	SCHEME = 'http://'
 
@@ -43,7 +43,7 @@ class HTTPDriver:
 
 		self.response = self.requests.get(url, headers=self.headers)
 		if self.response.status_code != requests.codes['OK']:
-			raise EnvironmentError('Couldn\'t Receive file from remote location')
+			raise ConnectionError('Couldn\'t Receive file from remote location')
 		if 'b' in mode:
 			body = BytesIO(self.response.text.encode())
 		else:
@@ -62,7 +62,7 @@ class HTTPDriver:
 		str/bytes (should fit the driver's mode) - Writes the data to the body of the request.
 		Otherwise treats it as writing of headers.
 		"""
-		if type(data) in (list, dict):
+		if type(data) in (list, dict, tuple):
 			return self.write_headers(data)
 		self.body += data
 
@@ -73,17 +73,19 @@ class HTTPDriver:
 		"""
 		if type(headers) is tuple:
 			self.headers[headers[0]] = headers[1]
+		if type(headers) is list:
+			headers = dict(headers)
 		if type(headers) is dict:
 			self.headers.update(headers)
 
 	def __getattr__(self, attr):
 		"""
-		Delegating attribute fetching to the response object, for full access to the information about
+		Delegating attribute fetching to the response obj, for full access to the information about
 		the request (available and needed only in read mode)
 		:param attr: attr to search
 		"""
 		if 'r' not in self.mode:
-			raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{attr}'")
+			raise AttributeError(f"'{self.__class__.__name__}' obj has no attribute '{attr}'")
 
 		return getattr(self.response, attr)
 

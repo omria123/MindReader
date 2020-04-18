@@ -1,8 +1,7 @@
 import json
 import struct
 
-from .cortex_pb2 import User, Snapshot
-from .sample import Sample
+from .protobuf.cortex_pb2 import User, Snapshot
 
 from . import Drivers
 
@@ -15,17 +14,17 @@ _readers = {}
 ##########################
 # Exported APId
 ##########################
-def read_object(url, *args, scheme=None, read_format=None, object=None, **kwargs):
+def read_object(url, *args, scheme=None, read_format=None, obj=None, **kwargs):
 	"""
-	Read an object from the given url.
+	Read an obj from the given url.
 	Optional: Read the file in respect to a given scheme encoded in the url.
 	:param url: URL which indicates where should we read from.
-	:param object: Optional - The readers are divides to themes, but there can also be fast accessed fast
+	:param obj: Optional - The readers are divides to themes, but there can also be fast accessed fast
 	if they have no theme (It's simply nicer to organize, for example have 3 types of sample readers).
 	:param read_format: Optional - Customize reader to read from.
 	:param scheme: Optional - scheme which chooses driver. Can also be integrated in the URL.
 	:param args, kwargs: extra arguments to give to the driver.
-	:return: An object which is read directly by the reader.
+	:return: An obj which is read directly by the reader.
 	"""
 	if scheme is None:
 		scheme = Drivers.DEFAULT_SCHEME
@@ -34,9 +33,9 @@ def read_object(url, *args, scheme=None, read_format=None, object=None, **kwargs
 
 	driver = Drivers.find_driver(scheme)
 	if read_format is None:
-		read_format = DEFAULT_READERS[object]
+		read_format = DEFAULT_READERS[obj]
 
-	return _readers[(object, read_format)](url, driver, *args, **kwargs)
+	return _readers[(obj, read_format)](url, driver, *args, **kwargs)
 
 
 def sample_reader(version):
@@ -75,7 +74,7 @@ def read_protobuf_sample(url, driver):
 	Reads the Sample, with the injected driver interface
 	:param url: URL to give the driver (where to read from)
 	:param driver: Injected driver which decides how to access the url
-	:return: Sample object which represent the stored sample.
+	:return: User, Read
 	"""
 	# Fixed fields for this format
 	fields = [{'pose': ['translation', 'rotation']}, 'color_image', 'depth_image', 'timestamp', 'feeling']
@@ -85,7 +84,7 @@ def read_protobuf_sample(url, driver):
 	user = User.FromString(next(messages))
 	snapshots = map(Snapshot.FromString, messages)
 
-	return Sample(user, fields, snapshots)
+	return user, snapshots
 
 
 @reader('json')
@@ -110,7 +109,7 @@ def read_snapshot_protocol_protobuf(url, driver):
 	The file in the URL contains the snapshot only
 	:param url: Where to read from.
 	:param driver: Driver to use for reading.
-	:return: Snapshot object
+	:return: Snapshot obj
 	"""
 	with driver(url, 'rb') as fd:
 		return Snapshot.ParseFromString(fd.read())
@@ -119,17 +118,13 @@ def read_snapshot_protocol_protobuf(url, driver):
 @reader(('user', 'json'))
 def read_user_json(url, driver):
 	"""
-	Reads the user object in json format from the url with the given driver.
+	Reads the user obj in json format from the url with the given driver.
+	The json should hold the dict which represents the attributes of the user. (i.e. user_id ...)
 	:param url: URL to read from.
 	:param driver: Driver which should be used for reading
-	:return: User object which should be converted to JSON.
+	:return: User obj which should be converted to JSON.
 	"""
-	user = object()
-	user_fields = read_json(url, driver)
-
-	for attr in user_fields:
-		setattr(user, attr, user_fields[attr])
-	return user
+	return type('User', (object,), read_json(url, driver))
 
 
 ##########################
@@ -141,7 +136,7 @@ def read_messages(fd, *, close_fd=True):
 	A message is in format of (32 bit of unsigned length) | (message_bytes)
 	Note: By default this function is responsible to close the fd, since it's being as a co-routine, it may take a while
 	(In code terms) until it closes. This can be overridden inserting close_fd=False
-	:param fd: A file like object with read functionality
+	:param fd: A file like obj with read functionality
 	:param close_fd: Whether or not to close the file when finished
 	:return: iterator of strings
 	"""
@@ -162,9 +157,9 @@ def read_messages(fd, *, close_fd=True):
 '''
 #def build_object(attrs, name='new_object'):
 	"""
-	Build basic object from dictionary of objects.
-	:param attrs: dict of attr, value pairs which describes the object.
-	:param name: The dunder name of the object.
+	Build basic obj from dictionary of objects.
+	:param attrs: dict of attr, value pairs which describes the obj.
+	:param name: The dunder name of the obj.
 	"""
-	return type(name, (object,), attrs)
+	return type(name, (obj,), attrs)
 '''
