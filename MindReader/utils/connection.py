@@ -1,25 +1,68 @@
-from .writer import write_object
+import logging
+
+from .. import IOAccess
+
+
+logger = logging.getLogger('connection')
 
 
 class Connection:
 	PROTOCOL_SCHEME = 'http'
 	GET_CONFIG = '/fields'
 	UPLOAD_SNAPSHOT = '/snapshot'
-	LOGIN = '/login_server'
+	REGISTER = '/register'
+	# User must contain those fields, can also be configurable if future changes demands it
+	USER_MUST_FIELDS = ['user_id', 'username']
+	MAX_TRIES = 3
 
 	def __init__(self, domain, user):
-		self.domain = domain
+		self.domain = domain.split('://', 1)[-1]  # Remove http prefix if exist
 		self.url_basis = self.PROTOCOL_SCHEME + '://' + self.domain
-		self.session_cookie = None
 		self.fields = None
-		self.login_server(user)
+		if any(field not in user for field in self.USER_MUST_FIELDS):
+			logger.error('User had a missing field')
+			raise ValueError('Invalid user')
 
-	def login_server(self, user):
-		response = write_object(self.url_basis + self.LOGIN, user, obj='user')
+		self.register_user(user)
+		self.user = user
+		logger.info('New connection created')
+		logger.debug(f'The host is {self.url_basis}')
+
+	def register_user(self, user):
+		"""
+		Register a user to the server, and get fields available
+		:param user: User dict.
+		"""
+		logger.info('Registering user')
+		headers = {'Content-Type': 'application/json'}
+
+		try:
+			response = IOAccess.write_url(self.url_basis + self.REGISTER, 'user', user, version='json',
+			                              driver_kwargs={'mode': 'w', 'headers': headers})
+			if response.status_code != 200:
+				raise ValueError(f'The server returned {response.status_code} - {response.text}')
+		except Exception as e:
+			logger.error(e)
+			raise ConnectionError(f'Couldn\'t upload user to {self.url_basis + self.REGISTER}')
+
 		self.fields = response.json()
-		self.session_cookie = response.headers['Set-Cookie'].split(';')[0].strip()
+		logger.debug(f'The accepted fields by the server are {self.fields}')
 
 	def upload(self, snapshot):
-		headers = {'Cookie': self.session_cookie}
-		write_object(self.url_basis + self.UPLOAD_SNAPSHOT, snapshot, headers=headers,
-		             obj='snapshot_protocol', write_format='protobuf')
+		"""
+		Uploads a single snapshot using HTTP REST API.
+		:param snapshot: Snapshot object which holds in it's attributes the different fields.
+		"""
+		logger.info('Uploading a snapshot')
+		# Since there is no alternative format for now this is fine, in the future this can be easily converted to
+		# a configurable attribute
+		headers = {'UserId': str(self.user['user_id']), 'Content-Type': 'application/protobuf'}
+		driver_kwargs = {'headers': headers, 'mode': 'wb'}
+		response = IOAccess.write_url(self.url_basis + self.UPLOAD_SNAPSHOT, 'snapshot', snapshot,
+		                              driver_kwargs=driver_kwargs, version='protocol_protobuf', fields=self.fields)
+
+		if response.status_code == 200:
+			logger.info('Snapshot was successfully uploaded')
+			return
+		logger.error(f'The server returned {response.status_code} - {response.text}')
+		raise ConnectionError('Couldn\'t upload snapshot')
