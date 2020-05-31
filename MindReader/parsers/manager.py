@@ -17,7 +17,7 @@ def _collect_parsers():
 	Collects parsers
 	"""
 	cur_dir = Path(__file__).parent
-	possible_paths = filter(lambda path: str(path) not in INTERNAL_FILES, cur_dir.glob('*.py'))
+	possible_paths = filter(lambda path: str(path.name) not in INTERNAL_FILES, cur_dir.glob('*.py'))
 
 	for parser_path in possible_paths:
 		parser_module_path = '.' + str(parser_path.with_suffix('').relative_to(cur_dir)).replace('/', '.')

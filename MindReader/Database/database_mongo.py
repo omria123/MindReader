@@ -29,9 +29,10 @@ class MongoDatabase:
 		"""
 
 		snapshots = self.db.snapshots
-		snapshot_identification = {'user_id': data['user_id'],
-		                           'datetime': data['snapshot_id'],
-		                           'snapshot_id': data['snpashot_id']}
+		snapshot_identification = {
+			'user_id': data['user_id'],
+			'datetime': data['snapshot_id'],
+			'snapshot_id': data['snapshot_id']}
 		# Assuming to be one to one the identification to be 1-to-1.
 		snapshot = snapshots.find_one_and_update(snapshot_identification, data)
 		if snapshot is None:

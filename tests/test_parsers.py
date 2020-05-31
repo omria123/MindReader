@@ -1,4 +1,5 @@
 import io
+from pathlib import Path
 
 from PIL import Image
 import pytest
@@ -14,6 +15,7 @@ RESULTS = {
 	'pose': {'pose'}}
 
 MAX_DIFF = 300  # Since some change still occur if images are the same
+CUR_DIR = Path(__file__).parent
 
 
 def test_parsers_fields():
@@ -35,6 +37,7 @@ def image_to_bytes(im, h, w):
 	('image.png', 'png'),
 ])
 def test_color_image(image_path, image_format, tmp_path):
+	image_path = str(CUR_DIR / image_path)
 	color_image.FORMAT = image_format
 
 	with open(image_path, 'rb') as fd:
