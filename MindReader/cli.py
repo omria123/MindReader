@@ -12,17 +12,8 @@ logger = logging.getLogger('CLI')
 @click.group()
 @click.option('-h', '--host', 'host', default=API_DEFAULT_HOST)
 @click.option('-p', '--port', 'port', default=API_DEFAULT_PORT, type=int)
-@click.option('--debug', is_flag=True)
-@click.option('--no-logging', is_flag=True)
 @click.pass_context
-def cli(ctx, host, port, debug, no_logging):
-	logging_level = logging.INFO
-	if debug:
-		logging_level = logging.DEBUG
-	if no_logging:
-		logging.disable()
-	logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging_level)
-
+def cli(ctx, host, port):
 	ctx.ensure_object(dict)
 	ctx.obj['url_base'] = f'http://{host:{ctx.obj[port]}}'
 	ctx.obj['publish'] = print
@@ -30,14 +21,14 @@ def cli(ctx, host, port, debug, no_logging):
 
 @cli.resultcallback
 @click.pass_context
-@log_error
+@log_error(logger)
 def handle_result(ctx, result):
 	ctx['publish'](result)
 
 
 @cli.command()
 @click.pass_context
-@log_error
+@log_error(logger)
 def get_users(ctx):
 	"""Get basic details of all users"""
 	logger.info('Getting users...')
@@ -47,7 +38,7 @@ def get_users(ctx):
 @cli.command()
 @click.argument('user-id')
 @click.pass_context
-@log_error
+@log_error(logger)
 def get_user(ctx, user_id):
 	"""Get information on the user with USER-ID"""
 	logger.info('Getting user...')
@@ -58,7 +49,7 @@ def get_user(ctx, user_id):
 @cli.command()
 @click.argument('user-id')
 @click.pass_context
-@log_error
+@log_error(logger)
 def get_snapshots(ctx, user_id):
 	"""Getting all the snapshots of user with USER-ID"""
 	logger.info('Getting snapshots...')
@@ -70,7 +61,7 @@ def get_snapshots(ctx, user_id):
 @click.argument('user-id')
 @click.argument('snapshot_id')
 @click.pass_context
-@log_error
+@log_error(logger)
 def get_snapshot(ctx, user_id, snapshot_id):
 	"""Get the description of snapshot with SNAPSHOT-ID of user with USER-ID"""
 	logger.info('Getting snapshot...')
@@ -89,6 +80,7 @@ def save_result(path, result):
 @click.argument('result-name')
 @click.option('-s', '--save', 'path', help='If specified saving result to file')
 @click.pass_context
+@log_error(logger)
 def get_result(ctx, user_id, snapshot_id, result_name, path):
 	"""Get information of specific result of analysis on the snapshot with SNAPSHOT-ID of user with USER-ID"""
 	logger.info('Getting result...')

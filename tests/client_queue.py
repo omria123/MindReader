@@ -11,7 +11,8 @@ from multiprocessing import Process
 
 from google.protobuf.json_format import MessageToDict
 
-from MindReader import upload_sample, IOAccess
+from MindReader import IOAccess
+from MindReader.client import upload_sample
 
 
 def test_client_queue(mq, cli_server, sample_factory):
@@ -64,7 +65,7 @@ def test_client_queue(mq, cli_server, sample_factory):
 
 	# MQ start
 	try:
-		mq.channel.start_consuming()
+		mq_handler.channel.start_consuming()
 	except KeyboardInterrupt:
 		pass
 
@@ -76,4 +77,4 @@ def test_client_queue(mq, cli_server, sample_factory):
 
 	# Teardown
 
-	mq.close()
+	mq_handler.close()

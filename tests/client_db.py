@@ -10,7 +10,8 @@ from multiprocessing import Process
 
 from google.protobuf.json_format import MessageToDict
 
-from MindReader import upload_sample, IOAccess
+from MindReader import IOAccess
+from MindReader.client import upload_sample
 
 
 def test_client_db(cli_server, db, mq, sample_factory, all_workers):

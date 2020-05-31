@@ -41,7 +41,7 @@ def all_workers(parsers, saver):
 @pytest.fixture
 def parsers():
 	def run(mq, is_url=True, consume=True):
-		run_parsers(PARSERS.keys(), mq, is_url, consume)
+		run_parsers(mq, PARSERS.keys(), is_url, consume)
 
 	return run
 

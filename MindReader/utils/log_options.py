@@ -6,9 +6,7 @@ from pathlib import Path
 def log_error(logger, suppress=True):
 	"""
 	Reusable decorator which adds logging of possible exception raised to the function.
-	Loss - The module which raised the error is always here.
-	Benefit - Suppress exceptions, thus ensuring the function won't fail. And easy to write.
-	Use as a safety net rather then shortcut for logging.
+	Use as a safety-net rather then shortcut for logging.
 	"""
 
 	def decorator(f):
@@ -20,6 +18,7 @@ def log_error(logger, suppress=True):
 				logger.error(e)
 				if not suppress:
 					raise e
+
 		return wrapper
 
 	return decorator

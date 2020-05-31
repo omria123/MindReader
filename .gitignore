@@ -2,5 +2,5 @@
 .pytest_cache/
 docs/build/
 .idea
-MindReader/utils/protobuf/cortex_pb2.py
+MindReader/utils/counter
 
