@@ -29,16 +29,22 @@ class MongoDatabase:
 		"""
 
 		snapshots = self.db.snapshots
+		# Assuming to be one to one the identification to be 1-to-1.
 		snapshot_identification = {
 			'user_id': data['user_id'],
 			'datetime': data['snapshot_id'],
 			'snapshot_id': data['snapshot_id']}
-		# Assuming to be one to one the identification to be 1-to-1.
-		snapshot = snapshots.find_one_and_update(snapshot_identification, data)
+
+		snapshot = snapshots.find_one(snapshot_identification)
 		if snapshot is None:
 			logger.debug('Inserting new snapshot...')
 			snapshots.insert_one(data)
-		logger.debug('New snapshot result is uploaded')
+			return
+
+
+		snapshot.update({})
+
+		logger.debug('Snapshot have been updated')
 
 	def save_user(self, user: dict):
 		"""
