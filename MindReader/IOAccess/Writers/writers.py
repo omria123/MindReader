@@ -5,8 +5,7 @@ import struct
 from google.protobuf.json_format import MessageToDict, ParseDict
 from google.protobuf.message import Message
 
-from MindReader.utils.protobuf.cortex_pb2 import User, Snapshot
-from MindReader.utils.protobuf import object_to_protobuf
+from MindReader.utils.protobuf import User, Snapshot, object_to_protobuf
 from ..manager import writer
 
 
