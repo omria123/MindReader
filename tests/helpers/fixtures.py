@@ -6,9 +6,10 @@ from subprocess import Popen, DEVNULL, call as subprocess_call
 import pytest
 
 from MindReader.utils.protobuf.cortex_pb2 import User, Snapshot, ColorImage, DepthImage, Feelings, Pose
-from MindReader import MessageQueue, Database
+from MindReader import MessageQueue, Database, Saver
+from MindReader.parsers import PARSERS
 from MindReader.server import cli_run_server
-from MindReader import run_server, run_api_server, IOAccess
+from MindReader import run_server, run_api_server, IOAccess, run_parser
 
 TEST_DATABASE_PORT = 7070
 TEST_DATABASE_ADDR = f'mongo://127.0.0.1:{TEST_DATABASE_PORT}'
@@ -21,6 +22,48 @@ TEST_SERVER_PORT = 5050
 ###########################
 # INIT ENTITIES
 ###########################
+
+@pytest.fixture
+def all_workers(parsers, saver):
+	def run(mq, db, is_url=True, consume=True):
+		if is_url:
+			mq = MessageQueue.MessageQueue(mq)
+			db = Database.Database(db)
+		parsers(mq, False, False)
+		saver(mq, db, False, False)
+		if consume:
+			mq.consume()
+
+	return run
+
+
+@pytest.fixture
+def parsers():
+	def run(mq, is_url=True, consume=True):
+		if is_url:
+			mq = MessageQueue.MessageQueue(mq)
+
+		for name in PARSERS:
+			mq.run_parser(PARSERS[name], start_consuming=False)
+
+		if consume:
+			mq.consume()
+
+	return run
+
+
+@pytest.fixture()
+def saver():
+	def run(mq, db, is_url=True, consume=True):
+		if is_url:
+			mq = MessageQueue.MessageQueue(mq)
+		mq.run_saver(Saver(db, is_url), consume)
+		if consume:
+			mq.consume()
+
+	return run
+
+
 @pytest.fixture
 def cli_server(tmp_path):
 	def start(mq_url):
@@ -50,9 +93,10 @@ def mq(request):
 	Popen(['docker', 'run', '--name', 'test-mq', '-d', '-p', f'{TEST_MQ_PORT}:5672', 'rabbitmq'], stdout=DEVNULL)
 
 	def get():
-		time.sleep(11)  # Take time before trying to connect
 		return MessageQueue.MessageQueue(TEST_MQ_ADDR)
 
+	time.sleep(11)  # Take time to make sure the docker is up
+	get.url = TEST_MQ_ADDR
 	return get
 
 
@@ -66,9 +110,10 @@ def db(request):
 	Popen(['docker', 'run', '--name', 'test-db', '-d', '-p', f'{TEST_DATABASE_PORT}:27017', 'mongo'], stdout=DEVNULL)
 
 	def get():
-		time.sleep(11)  # Take time before trying to connect
 		return Database.Database(TEST_DATABASE_ADDR)
 
+	time.sleep(11)  # Take time to make sure the docker is up
+	get.url = TEST_DATABASE_ADDR
 	return get
 
 

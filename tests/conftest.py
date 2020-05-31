@@ -11,3 +11,4 @@ from fixtures import sample_factory
 
 from fixtures import fake_http_writing
 from fixtures import cli_server, server, mq, db
+from fixtures import parsers, saver, all_workers

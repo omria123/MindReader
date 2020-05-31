@@ -46,9 +46,7 @@ def read_json(fd):
 	return json.load(fd)
 
 
-##########################
-# HELPER FUNCTIONS
-##########################
+@reader('messages')
 def read_messages(fd, *, force_open=True):
 	"""
 	Read messages of the format (len | string)

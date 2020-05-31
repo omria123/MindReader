@@ -137,7 +137,7 @@ def access(operation, fd, name, *args, version=None, **kwargs):
 	try:
 		selected = context['functions_dict'][name][version]
 	except KeyError:
-		raise ValueError(context['not_found'])
+		raise ValueError(context['not_found'] + f' {name=}, {version=}')
 
 	return selected(fd, *args, **kwargs)
 

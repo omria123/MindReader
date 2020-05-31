@@ -106,9 +106,7 @@ def write_protobuf_sample(fd, user, snapshots):
 	write_messages(fd, messages)
 
 
-##########################
-# Helper functions
-##########################
+@writer('messages')
 def write_messages(fd, strings, *, close_fd=False):
 	"""
 	Write iterable of strings as messages (len | string) to fd
@@ -120,6 +118,11 @@ def write_messages(fd, strings, *, close_fd=False):
 		fd.write(struct.pack('<L', len(string)) + string)
 	if close_fd:
 		fd.close()
+
+
+##########################
+# Helper functions
+##########################
 
 
 def generic_write_headers(fd, headers, mode='wb'):
@@ -137,9 +140,3 @@ def generic_write_headers(fd, headers, mode='wb'):
 	if 'b' in mode:
 		headers_string = headers.encode()
 	fd.write(headers_string)
-
-
-def dicitify(obj):
-	obj.__getitem__ = lambda item: getattr(obj, item)
-	obj.__setitem__ = lambda item, value: setattr(obj, item, value)
-	obj.__contains__ = lambda item: hasattr(obj, item)

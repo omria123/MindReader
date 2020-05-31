@@ -16,28 +16,26 @@ def _collect_parsers():
 	possible_paths = filter(lambda path: str(path) not in INTERNAL_FILES, cur_dir.glob('*.py'))
 
 	for parser_path in possible_paths:
-		parser_module_path = '.' + parser_path.relative_to(cur_dir).stem.replace('/', '.')
+		parser_module_path = '.' + str(parser_path.with_suffix('').relative_to(cur_dir)).replace('/', '.')
 		parser_module = importlib.import_module(parser_module_path, package=__package__)
+
 		for attr in dir(parser_module):
-			if attr.startswith('_') or not hasattr(attr, 'name'):
-				continue
-			if hasattr(attr, 'fields'):  # Already collected
-				continue
+			if attr.startswith('_'):
+				continue  # Ignore private
+
+			if not hasattr(getattr(parser_module, attr), 'name') or not attr.endswith('parser'):
+				continue  # Identified as parser
+
+			if hasattr(attr, 'fields'):
+				continue  # Already collected
+
 			try:
-				parser(getattr(parser_module, attr))
+				parser()(getattr(parser_module, attr))
 			except ValueError:
 				continue
 
 
 def run_parser(parser_type, paths, publish, version=None):
-	"""
-
-	:param parser_type:
-	:param paths:
-	:param publish:
-	:param version:
-	:return:
-	"""
 	for path in paths:
 		publish(parse(parser_type, path, version))
 

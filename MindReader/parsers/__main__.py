@@ -27,3 +27,21 @@ def run_parser(field, mq):
 def parse(field, path):
 	pass
 '''
+
+from pathlib import Path
+
+import click
+
+from .. import IOAccess
+
+
+@click.group()
+def cli():
+	pass
+
+
+def parse(result_name, snapshot_path):
+	version = Path(snapshot_path).suffix
+	if version not in IOAccess.object_readers('snapshot'):
+		print('The snapshot encoding is not supported')
+	IOAccess.read_url(snapshot_path, )

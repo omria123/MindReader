@@ -13,8 +13,11 @@ class Saver:
 	The real functionality is in the general Database subpackage.
 	"""
 
-	def __init__(self, database_url):
-		self.database = Database.Database(database_url)
+	def __init__(self, database, is_url=True):
+		if is_url:
+			self.database = Database.Database(database)
+		else:
+			self.database = database
 
 	def save(self, name, data):
 		"""

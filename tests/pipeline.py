@@ -6,7 +6,7 @@ from google.protobuf.json_format import MessageToDict
 import MindReader
 import MindReader.utils
 
-
+'''
 def test_pipeline(sample_factory, tmp_path, server, mq, db):
 	user, snapshots = sample_factory()
 	sample_snapshots, compare_snapshots = itertools.tee(snapshots)
@@ -21,3 +21,4 @@ def test_pipeline(sample_factory, tmp_path, server, mq, db):
 	assert MessageToDict(user) == db.get_user(user)
 	assert set([(snapshot.datetime, snapshot.DESCRIPTOR.fields_by_name.keys()) for snapshot in
 	            compare_snapshots]) == set(db.get_snapshots(user.user_id))
+'''

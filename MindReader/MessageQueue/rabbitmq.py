@@ -13,7 +13,9 @@ logger = logging.getLogger('MessageQueue')
 def body_json(f):
 	@functools.wraps(f)
 	def wrapper(channel, method, properties, body):
-		f(channel, method, properties, json.loads(body))
+		if isinstance(body, bytes):
+			body = body.decode()
+		return f(channel, method, properties, json.loads(body))
 
 	return wrapper
 
@@ -26,20 +28,8 @@ def publish_json(f):
 	return wrapper
 
 
-def send_ack(f):
-	@functools.wraps(f)
-	def wrapper(channel, delivery, properties, body):
-		try:
-			wrapper(channel, delivery, properties, body)
-			channel.basic_ack(delivery_tag=delivery.delivery_tag)
-		except Exception as e:
-			logger.error(e)
-
-
 class RabbitMQ:
 	scheme = 'rabbitmq'
-	DEFAULT_CONFIG = {'raw_user': ['user_parser'], "raw_snapshot": ['snapshot_parser']}
-	DEFAULT_EXCHANGE_TYPE = 'fanout'
 	DEFAULT_PORT = 5672
 
 	def __init__(self, host, port=None):
@@ -78,7 +68,7 @@ class RabbitMQ:
 		channel.queue_declare(queue='saver', durable=True)
 		channel.basic_publish(routing_key='saver', exchange='', body=result,
 		                      properties=pika.BasicProperties(delivery_mode=2))
-		logger.debug('New result published')
+		logger.debug(f'New result published {result}')
 
 	def run_parser(self, parser, start_consuming=True):
 		"""
@@ -89,23 +79,27 @@ class RabbitMQ:
 		name = parser.name
 		fields = parser.fields
 
-		@send_ack
 		def callback(channel, method, properties, body):
-			raw_snapshot_path = Path(body)
+			raw_snapshot_path = Path(body.decode())
 
-			user_id = str(raw_snapshot_path.parent.parent)
-			snapshot_id = str(raw_snapshot_path.parent)
-
+			user_id = str(raw_snapshot_path.parent.parent.name)
+			snapshot_id = str(raw_snapshot_path.parent.name)
+			snapshot_format = raw_snapshot_path.suffix.strip('.')
 			logger.info(f'Parser {name} got new work')
 			logger.debug(f'The requested snapshot is at: {raw_snapshot_path}')
 
-			snapshot = IOAccess.read_url(str(raw_snapshot_path), 'snapshot', version=raw_snapshot_path.suffix)
+			with IOAccess.open(str(raw_snapshot_path), mode='rb') as fd:
+				snapshot = IOAccess.read(fd, 'snapshot', version=snapshot_format)
+
 			output_path = str(raw_snapshot_path.parent / f'{name}.binary')
+
 			try:
 				args = {field: getattr(snapshot, field) for field in fields if field != 'output'}
 			except AttributeError:
 				logger.info("The snapshot doesn't have the value")
+				channel.basic_ack(delivery_tag=method.delivery_tag)
 				return
+
 			if 'output' in fields:
 				logger.debug(f'The result data will be saved to {output_path}')
 				args['output'] = IOAccess.open(output_path, 'wb')
@@ -113,27 +107,28 @@ class RabbitMQ:
 			result = parser(**args)
 
 			logger.info('Parser finished')
-			logger.debug(f'Parser returned {result["result"]}')
-
-			if 'output' in args:
-				args['output'].close()
+			logger.debug(f'Parser returned {result}')
 
 			db_result = {
 				'result': {name: {'metadata': result}},
-				'datetime': snapshot.datetime,
+				'timestamp': snapshot.datetime,
 				'snapshot_id': snapshot_id,
 				'user_id': user_id
 			}
 			if 'output' in args:
 				db_result['result'][name]['location'] = output_path
+				output = args['output']
+				db_result['result'][name]['Content-Length'] = output.seek(0, 2)
+				output.close()
 
 			self.publish_result(db_result, channel=channel)
+			channel.basic_ack(delivery_tag=method.delivery_tag)
 
 		self.channel.exchange_declare(exchange='raw_snapshot', exchange_type='fanout')
-		self.channel.queue_declare(queue=parser.name, durable=True)
-		self.channel.bind_queue(queue=parser.name, exchange='raw_snapshot')
-		self.channel.basic_consume(queue=parser.name, on_message_callback=callback,
-		                           auto_ack=False)  # TODO: check auto_ack
+		queue_name = self.channel.queue_declare(queue=parser.name, durable=True).method.queue
+		self.channel.queue_bind(queue=queue_name, exchange='raw_snapshot')
+		self.channel.basic_consume(queue=queue_name, on_message_callback=callback)
+
 		if start_consuming:
 			self.consume()
 
@@ -141,21 +136,24 @@ class RabbitMQ:
 		"""
 		Assigns a saver to the Message Queue.
 		"""
-		logger.info('New Saver is assigned')
 
 		@body_json
-		@send_ack
 		def callback(channel, method, properties, body):
+			logger.info('Got new message to save')
+			logger.debug(body)
 			if 'gender' and 'birthday' in body:  # Save user
 				logger.info('Saving user...')
 				saver.save_user(body)
-				return
-			logger.info('Saving snapshot....')
-			name = body['result'][0]
-			saver.save(name, body)
+			else:
+				logger.info('Saving snapshot....')
+				name = body
+				saver.save(name, body)
+			channel.basic_ack(delivery_tag=method.delivery_tag)
+
+		logger.info('New Saver is assigned')
 
 		self.channel.queue_declare(queue='saver', durable=True)
-		self.channel.basic_consume(queue='saver', on_message_callback=callback)
+		self.channel.basic_consume(queue='saver', on_message_callback=callback, auto_ack=False)
 		if start_consuming:
 			self.consume()
 

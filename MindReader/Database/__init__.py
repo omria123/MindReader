@@ -24,22 +24,22 @@ def _collect_databases():
 		db_module_path = '.' + str(db_path.with_suffix('').relative_to(cur_dir)).replace('/', '.')
 		db_module = importlib.import_module(db_module_path, package=__package__)
 		for attr in dir(db_module):
-			if attr.startswith('_') or not hasattr(attr, 'scheme'):
+			if attr.startswith('_') or not hasattr(getattr(db_module, attr), 'scheme'):
 				continue
+
 			try:
-				database(getattr(db_module, attr))
+				database()(getattr(db_module, attr))
 			except ValueError:
 				continue
 
 
-def database(scheme=None):
+def database(name=None):
 	"""
 	Collects databases interfaces.
 	"""
 
 	def decorator(obj):
-		global scheme
-		scheme = scheme or (hasattr(obj, 'scheme') and obj.scheme)
+		scheme = name or (hasattr(obj, 'scheme') and obj.scheme)
 		if scheme:
 			DATABASES[scheme] = obj
 			return DATABASES

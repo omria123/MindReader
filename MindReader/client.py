@@ -8,6 +8,8 @@ from .utils import Connection, log_error
 from MindReader.IOAccess import object_readers, read_url, DRIVERS
 
 logger = logging.getLogger('client')
+available_schemes = list(DRIVERS.keys())
+available_schemes.remove('object')
 
 
 @click.group()
@@ -23,10 +25,10 @@ def cli(no_logging):
 @click.option('-p', '--port', 'port', default=SERVER_DEFAULT_PORT, type=int)
 @click.option('--sample-format', type=click.Choice(object_readers('sample')), multiple=False, default=None, help=
 'Select specific format of the sample')
-@click.option('--scheme', type=click.Choice(DRIVERS.keys()), multiple=False, default=None, help=
-'Choose scheme to read the object from, defaulted to read from the FS')
+@click.option('--scheme', type=click.Choice(available_schemes), multiple=False, default=None, help=
+'Choose scheme to read the object from, defaulted to read from the FS.')
 @click.option('-n', 'amount', type=int, default=-1, help=
-'Number of snapshots to take from the sample')
+'Number of snapshots to take from the sample. Otherwise ')
 def upload_sample_cli(path, host, port, *, sample_format=None, scheme=None, amount=-1):
 	"""
 	Reads the sample from PATH and uploads it to the server listening on HOST:PORT.

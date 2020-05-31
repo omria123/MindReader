@@ -98,7 +98,6 @@ def register():
 
 
 def config_publishers(user_publisher=None, snapshot_publisher=None):
-
 	global handle_user, handle_snapshot
 	logger.debug('Configuring user, snapshot handlers')
 	handle_user = user_publisher or handle_user
@@ -114,4 +113,7 @@ def listener(host, port):
 
 	logger.info(f'Listening on {host}:{port}')
 	logging.getLogger('werkzeug').setLevel(logging.CRITICAL)
-	app.run(host, port)
+	try:
+		app.run(host, port)
+	except KeyboardInterrupt:
+		logger.info('SIGINT sent exiting...')

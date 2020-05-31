@@ -9,13 +9,14 @@ class MongoDatabase:
 	"""
 	Mongodb implementation of the database.
 	"""
+	scheme = 'mongo'
 	DEFAULT_PORT = 27017
 	SUPPORTABLE_FIELDS = ['pose', 'color_image', 'depth_image', 'feelings']  # TODO: change this
 
 	def __init__(self, host, port=None):
 		if port is None:
-			port = 27017
-		client = pymongo.MongoClient(host, port)
+			port = self.DEFAULT_PORT
+		client = pymongo.MongoClient(host, int(port), connect=False)
 		db = client.db
 		self.client = client
 		self.db = db
@@ -34,22 +35,25 @@ class MongoDatabase:
 		# Assuming to be one to one the identification to be 1-to-1.
 		snapshot = snapshots.find_one_and_update(snapshot_identification, data)
 		if snapshot is None:
-			logger.debug('insert new snapshot')
+			logger.debug('Inserting new snapshot...')
 			snapshots.insert_one(data)
+		logger.debug('New snapshot result is uploaded')
 
 	def save_user(self, user: dict):
 		"""
 		Saves user to database
 		:param user: User dictionary which holds the attribute of the user.
 		"""
+		logger.debug('Inserting new user....')
 		users = self.db.users
 		users.insert_one(user)
+		logger.debug('New user inserted')
 
 	def get_users(self):
-		return [(user['username'], user['user_id']) for user in self.db.users.find()]
+		return [(user['username'], user['user_id']) for user in self.db.users.find({})]
 
 	def get_user(self, user_id):
-		user = self.db.users.find_one({'user_id': user_id})
+		user = self.db.users.find_one({'user_id': str(user_id)})
 		if user is None:
 			return None
 		del user['_id']
@@ -57,12 +61,16 @@ class MongoDatabase:
 
 	def get_snapshots(self, user_id):
 		user = self.get_user(user_id)
-		user_snapshots = self.db.snapshots.find({'user_id', user_id})
+		user_snapshots = self.db.snapshots.find({'user_id': user_id})
 
-		def extract_basic_info(snapshot):
-			return tuple(key for key in snapshot.keys() if key[0] != '_')
+		def extract_metadata(snapshot):
+			return {
+				'timestamp': snapshot['datetime'],
+				'results': list(snapshot['result'].keys()),
+				'user_id': snapshot['user_id']
+			}
 
-		return user, list(map(extract_basic_info, user_snapshots))
+		return user, list(map(extract_metadata, user_snapshots))
 
 	def get_snapshot(self, user_id, snapshot_id):
 		user = self.get_user(user_id)
@@ -71,7 +79,7 @@ class MongoDatabase:
 		snapshot = self.db.snapshots.find_one({'user_id': user_id, 'snapshot_id': snapshot_id})
 		if snapshot is None:
 			return user, None
-		return user, [snapshot['datetime'], snapshot['snpashot_id'], snapshot['result']]
+		return user, [snapshot['datetime'], snapshot['snapshot_id'], snapshot['result']]
 
 	def get_snapshot_result(self, user_id, snapshot_id, result_name):
 		user, snapshot = self.get_snapshot(user_id, snapshot_id)

@@ -61,6 +61,7 @@ def test_client_queue(mq, cli_server, sample_factory):
 
 	# Client invocation
 	Process(target=run_client, args=()).start()
+
 	# MQ start
 	try:
 		mq.channel.start_consuming()
