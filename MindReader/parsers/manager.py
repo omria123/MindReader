@@ -1,8 +1,12 @@
 import importlib
 import inspect
-import functools
+import logging
 
 from pathlib import Path
+
+from .. import IOAccess, MessageQueue
+
+logger = logging.getLogger('parsers')
 
 INTERNAL_FILES = {'__init__.py', 'manager.py', '__main__.py'}
 PARSERS = {}
@@ -35,50 +39,8 @@ def _collect_parsers():
 				continue
 
 
-def run_parser(parser_type, paths, publish, version=None):
-	for path in paths:
-		publish(parse(parser_type, path, version))
-
-
-def parse(name, data, context=None):
-	"""
-	Parses the raw snapshot data given from the server.
-	According to the given result_name, extract the appropriate part from the snapshot.
-	:param name: The name of the parser which should be invoked.
-	:param data: Raw snapshot data in bytes/str.
-	:param context: Dependency injection object. Defaults to be NOP (which means it's just looking like everything is
-	available)
-	:return: The parsed value of the result_name from the raw snapshot
-	"""
-	if name not in PARSERS:
-		raise ValueError('No such parser')
-	data_parser = resolve_parser(name)
-	# snapshot_dict = parse_snapshot(data, context)  # TODO define context
-	data_parser(snapshot_dict)
-
-
-def resolve_parser(name):
-	"""
-	Resolve the parser by given name, return it's wrapped version where every irrelevant argument is dropped.
-	Nice to use when there are a lot of given kwargs which needs to be filtered
-	:param name: Name of the required parser.
-	:return:
-	"""
-	selected_parser = PARSERS[name]
-	if not hasattr(selected_parser, 'fields'):
-		# Add the fields manually. The [1:] slicing is required to skip the context positional
-		selected_parser.fields = inspect.getfullargspec(selected_parser)[0][1:]
-
-	@functools.wraps(selected_parser)
-	def wrapper(context, *args, **kwargs):
-		return selected_parser(context, *args,
-		                       **{key: kwargs[key] for key in kwargs if key in selected_parser.fields})
-
-	return wrapper
-
-
 def parser(name=None):
-	"""Collect a parser"""
+	"""Collects a parser"""
 
 	def decorator(f):
 		args_spec = inspect.getfullargspec(f)
@@ -90,3 +52,68 @@ def parser(name=None):
 		raise ValueError('Parser has no name')
 
 	return decorator
+
+
+def parse(snapshot_path, result_name):
+	"""Parses a message"""
+	snapshot_path = Path(snapshot_path)
+	version = snapshot_path.suffix[1:]
+
+	if version not in IOAccess.object_readers('snapshot'):
+		logger.error('The snapshot encoding is not supported')
+		return
+	if result_name not in PARSERS:
+		logger.error('Bad result name: no such parser')
+		return
+
+	selected_parser = PARSERS[result_name]
+	fields = selected_parser.fields
+	logger.info(f'Parser {result_name} got new work')
+	logger.debug(f'The requested snapshot is at: {snapshot_path}')
+
+	with IOAccess.open(str(snapshot_path), mode='rb') as fd:
+		snapshot = IOAccess.read(fd, 'snapshot', version=version)
+
+	output_path = str(snapshot_path.parent / f'{result_name}.binary')
+
+	try:
+		args = {field: getattr(snapshot, field) for field in fields if field != 'output'}
+	except AttributeError:
+		logger.info("The snapshot doesn't have the value")
+		return
+
+	if 'output' in fields:
+		logger.debug(f'The result data will be saved to {output_path}')
+		args['output'] = IOAccess.open(output_path, 'wb')
+
+	result = selected_parser(**args)
+
+	logger.info('Parser finished')
+	logger.debug(f'Parser returned {result}')
+
+	published_result = {
+		'result': {result_name: {'metadata': result}},
+		'timestamp': snapshot.datetime,
+	}
+	if 'output' in args:
+		published_result['result'][result_name]['location'] = output_path
+		output = args['output']
+		published_result['result'][result_name]['Content-Length'] = output.seek(0, 2)
+		output.close()
+
+	return published_result
+
+
+def run_parsers(mq, parsers, is_url=True, start_consuming=True):
+	"""
+	Runs the parsers to the mq.
+	If is_url is False then mq is assumed to be MessageQueue object.
+	"""
+	if is_url:
+		mq = MessageQueue.MessageQueue(mq)
+
+	for name in parsers:
+		mq.run_parser(name, lambda path: parse(path, name), start_consuming=False)
+
+	if start_consuming:
+		mq.consume()

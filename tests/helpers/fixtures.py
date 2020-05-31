@@ -6,10 +6,11 @@ from subprocess import Popen, DEVNULL, call as subprocess_call
 import pytest
 
 from MindReader.utils.protobuf.cortex_pb2 import User, Snapshot, ColorImage, DepthImage, Feelings, Pose
-from MindReader import MessageQueue, Database, Saver
-from MindReader.parsers import PARSERS
-from MindReader.server import cli_run_server
-from MindReader import run_server, run_api_server, IOAccess, run_parser
+from MindReader import MessageQueue, Database, IOAccess
+from MindReader.api import run_api_server
+from MindReader.saver import Saver
+from MindReader.parsers import PARSERS, run_parsers
+from MindReader.server import run_server_publisher, run_server
 
 TEST_DATABASE_PORT = 7070
 TEST_DATABASE_ADDR = f'mongo://127.0.0.1:{TEST_DATABASE_PORT}'
@@ -40,14 +41,7 @@ def all_workers(parsers, saver):
 @pytest.fixture
 def parsers():
 	def run(mq, is_url=True, consume=True):
-		if is_url:
-			mq = MessageQueue.MessageQueue(mq)
-
-		for name in PARSERS:
-			mq.run_parser(PARSERS[name], start_consuming=False)
-
-		if consume:
-			mq.consume()
+		run_parsers(PARSERS.keys(), mq, is_url, consume)
 
 	return run
 
@@ -67,7 +61,7 @@ def saver():
 @pytest.fixture
 def cli_server(tmp_path):
 	def start(mq_url):
-		cli_run_server.callback(mq_url, start.host, start.port, str(tmp_path))
+		run_server(mq_url, start.host, start.port, str(tmp_path))
 
 	start.host, start.port = '127.0.0.1', TEST_SERVER_PORT
 	return start
@@ -77,7 +71,7 @@ def cli_server(tmp_path):
 def server():
 	def start(publish_user, publish_snapshot):
 		args = (start.host, start.port, publish_user, publish_snapshot)
-		run_server(*args)
+		run_server_publisher(*args)
 
 	start.host, start.port = '127.0.0.1', TEST_SERVER_PORT
 	return start

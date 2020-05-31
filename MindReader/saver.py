@@ -40,15 +40,8 @@ class Saver:
 
 
 @click.group()
-@click.option('--debug', is_flag=True)
-@click.option('--no-logging', is_flag=True)
-def cli(debug, no_logging):
-	logging_level = logging.INFO
-	if debug:
-		logging_level = logging.DEBUG
-	if no_logging:
-		logging.disable()
-	logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging_level)
+def cli():
+	pass
 
 
 @cli.command('save')

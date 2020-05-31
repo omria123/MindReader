@@ -16,7 +16,7 @@ on the result.
 Note: The fields has to be main fields of a snapshot.
 """
 
-from .manager import parser, parse, PARSERS, run_parser
+from .manager import parser, parse, PARSERS, run_parsers
 from .manager import _collect_parsers
 
 _collect_parsers()

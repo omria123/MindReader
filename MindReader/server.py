@@ -50,9 +50,12 @@ def cli_run_server(mq_url, host, port, data_dir):
 	def snapshot_publisher(*args):
 		return handle_snapshot(*args, data_dir, mq)
 
-	run_server(host, port, user_publisher, snapshot_publisher)
+	run_server_publisher(host, port, user_publisher, snapshot_publisher)
 
 	mq.close()
+
+
+run_server = cli_run_server.callback
 
 
 ##########################
@@ -60,7 +63,7 @@ def cli_run_server(mq_url, host, port, data_dir):
 ##########################
 
 @log_error(logger)
-def run_server(host, port, publish_user=None, publish_snapshot=None):
+def run_server_publisher(host, port, publish_user=None, publish_snapshot=None):
 	"""
 	Run a server which listens on host:port.
 	The server receives every user and snapshots, and publishes them with given handlers.

@@ -70,64 +70,32 @@ class RabbitMQ:
 		                      properties=pika.BasicProperties(delivery_mode=2))
 		logger.debug(f'New result published {result}')
 
-	def run_parser(self, parser, start_consuming=True):
+	def run_parser(self, name, parser, start_consuming=True):
 		"""
 		Running parser which feeds on the message queue.
 		Passing the parser every field it needs from the snapshot, and publishes the result.
 		"""
-		logger.info(f'New parser of {parser.name} is assigned')
-		name = parser.name
-		fields = parser.fields
 
 		def callback(channel, method, properties, body):
+			logger.info('New raw snapshot received')
 			raw_snapshot_path = Path(body.decode())
-
 			user_id = str(raw_snapshot_path.parent.parent.name)
 			snapshot_id = str(raw_snapshot_path.parent.name)
-			snapshot_format = raw_snapshot_path.suffix.strip('.')
-			logger.info(f'Parser {name} got new work')
-			logger.debug(f'The requested snapshot is at: {raw_snapshot_path}')
 
-			with IOAccess.open(str(raw_snapshot_path), mode='rb') as fd:
-				snapshot = IOAccess.read(fd, 'snapshot', version=snapshot_format)
-
-			output_path = str(raw_snapshot_path.parent / f'{name}.binary')
-
-			try:
-				args = {field: getattr(snapshot, field) for field in fields if field != 'output'}
-			except AttributeError:
-				logger.info("The snapshot doesn't have the value")
+			db_result = parser(raw_snapshot_path)
+			if db_result is None:  # Nothing to publish
 				channel.basic_ack(delivery_tag=method.delivery_tag)
 				return
 
-			if 'output' in fields:
-				logger.debug(f'The result data will be saved to {output_path}')
-				args['output'] = IOAccess.open(output_path, 'wb')
-
-			result = parser(**args)
-
-			logger.info('Parser finished')
-			logger.debug(f'Parser returned {result}')
-
-			db_result = {
-				'result': {name: {'metadata': result}},
-				'timestamp': snapshot.datetime,
-				'snapshot_id': snapshot_id,
-				'user_id': user_id
-			}
-			if 'output' in args:
-				db_result['result'][name]['location'] = output_path
-				output = args['output']
-				db_result['result'][name]['Content-Length'] = output.seek(0, 2)
-				output.close()
-
+			db_result.update({'snapshot_id': snapshot_id, 'user_id': user_id})
 			self.publish_result(db_result, channel=channel)
+
 			channel.basic_ack(delivery_tag=method.delivery_tag)
 
 		self.channel.exchange_declare(exchange='raw_snapshot', exchange_type='fanout')
-		queue_name = self.channel.queue_declare(queue=parser.name, durable=True).method.queue
-		self.channel.queue_bind(queue=queue_name, exchange='raw_snapshot')
-		self.channel.basic_consume(queue=queue_name, on_message_callback=callback)
+		self.channel.queue_declare(queue=name, durable=True)
+		self.channel.queue_bind(queue=name, exchange='raw_snapshot')
+		self.channel.basic_consume(queue=name, on_message_callback=callback)
 
 		if start_consuming:
 			self.consume()

@@ -11,7 +11,8 @@ import os
 
 from google.protobuf.json_format import MessageToDict
 
-from MindReader import upload_sample, IOAccess
+from MindReader import IOAccess
+from MindReader.client import upload_sample
 
 
 def test_client_server(server, sample_factory):

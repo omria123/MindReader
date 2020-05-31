@@ -5,7 +5,7 @@ import struct
 from google.protobuf.json_format import MessageToDict
 
 from ..manager import reader
-from MindReader.utils.protobuf import Snapshot, User
+from ...utils.protobuf import Snapshot, User
 
 
 @reader('sample')

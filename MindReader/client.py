@@ -28,7 +28,7 @@ def cli(no_logging):
 @click.option('--scheme', type=click.Choice(available_schemes), multiple=False, default=None, help=
 'Choose scheme to read the object from, defaulted to read from the FS.')
 @click.option('-n', 'amount', type=int, default=-1, help=
-'Number of snapshots to take from the sample. Otherwise ')
+'If mentioned, bounds the number of sent snapshots')
 def upload_sample_cli(path, host, port, *, sample_format=None, scheme=None, amount=-1):
 	"""
 	Reads the sample from PATH and uploads it to the server listening on HOST:PORT.

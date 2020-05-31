@@ -15,17 +15,34 @@ logger = logging.getLogger('API')
 MAX_POSTS = 20
 
 
+########################
+# CLI ACCESS
+########################
 @click.group()
-@click.option('--debug', is_flag=True)
-@click.option('--no-logging', is_flag=True)
-def cli(debug, no_logging):
-	logging_level = logging.INFO
-	if debug:
-		logging_level = logging.DEBUG
-	if no_logging:
-		logging.disable()
-	logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging_level)
+def cli():
+	pass
 
+
+@cli.command(name='run-api-server')
+@click.option('-h', '--host', 'host', default=API_DEFAULT_HOST)
+@click.option('-p', '--port', 'port', default=API_DEFAULT_PORT, type=int)
+@click.argument('database')
+def cli_run_api_server(host, port, database):
+	"""
+	Runs the server to access the DATABASE
+	"""
+
+	g.database = database
+	logging.getLogger('werkzeug').disabled = True  # Don't want the weird Flask logger
+	app.run(host=host, port=port)
+
+
+run_api_server = cli_run_api_server
+
+
+######################
+# HELPERS
+######################
 
 def handle_db_fail(log):
 	"""
@@ -45,6 +62,17 @@ def handle_db_fail(log):
 		return wrapper
 
 	return decorator
+
+
+def bound_amount(l, bound=MAX_POSTS):
+	counter = 0
+	if 'counter' in request.args:
+		counter = int(request.args['counter'])
+
+	if counter + bound < len(l):
+		return l[counter: counter + bound]
+	else:
+		return l[counter:]
 
 
 ########################
@@ -182,31 +210,6 @@ def load():
 		phrase = request.args['phrase']
 	users = get_users()
 	return jsonify(bound_amount([(name, uid) for name, uid in users if phrase in name]))
-
-
-@cli.command(name='run-api-server')
-@click.option('-h', '--host', 'host', default=API_DEFAULT_HOST)
-@click.option('-p', '--port', 'port', default=API_DEFAULT_PORT, type=int)
-@click.argument('database')
-def run_api_server(host, port, database):
-	"""
-	Runs the server to access the DATABASE
-	"""
-
-	g.database = database
-	logging.getLogger('werkzeug').disabled = True  # Don't want the weird Flask logger
-	app.run(host=host, port=port)
-
-
-def bound_amount(l, bound=MAX_POSTS):
-	counter = 0
-	if 'counter' in request.args:
-		counter = int(request.args['counter'])
-
-	if counter + bound < len(l):
-		return l[counter: counter + bound]
-	else:
-		return l[counter:]
 
 
 if __name__ == '__main__':
