@@ -16,4 +16,4 @@ WORKDIR ../
 COPY ./requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-CMD ["python" , "-m", "MindReader.parsers" , "run-parser", "rabbitmq://message-queue:5672"]
+CMD ["python" , "-m", "MindReader.parsers" , "run-parser", "rabbitmq://pipeline-message-queue:5672"]

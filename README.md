@@ -95,10 +95,13 @@ The package provides the following Interface:
         ```shell script
           $ python -m MindReader.parsers run-parsers -n name1 -n name2 ... MQ-URL 
         ```
-        Attaches the parsers to work on the queue. The process will begin to consume immediately.
+        Attaches the given parsers to work on the queue. The process will begin to consume immediately.
         
         Note: The MQ-URL should also include the scheme which imply the specific MQ.
         For example rabbitmq://127.0.0.1:5672. (The same goes in the future and for DB-URL)
+        
+        Note: When running parsers together in the same command, all of them works on the same process.
+        (Which is ideally better/fine for one computer or any simple case)
         
         ```shell script
           $ python -m MindReader.parsers parse PATH NAME

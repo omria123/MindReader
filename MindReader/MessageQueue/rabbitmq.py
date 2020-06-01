@@ -157,7 +157,7 @@ class RabbitMQ:
 		self.connection.close()
 
 	def __str__(self):
-		return repr(self)
+		return f'{self.scheme}://{self.host}:{self.port}'
 
 	def __repr__(self):
-		return f'RabbitMQ({self.host}:{self.port}, )'
+		return f'RabbitMQ({str(self)})'

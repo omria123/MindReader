@@ -21,5 +21,4 @@ COPY ./requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 
-
-CMD ["python", "-m", "MindReader.server", "run-server", "rabbitmq://message-queue:5672", "--data-dir", "/usr/src/app/data"]
+CMD ["python", "-m", "MindReader.server", "run-server", "rabbitmq://pipeline-message-queue:5672", "--data-dir", "/usr/src/app/data"]

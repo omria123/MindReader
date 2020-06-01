@@ -118,4 +118,4 @@ class HTTPDriver:
 		return f'HTTPDriver(url={self.url}, {method=})',
 
 	def __str__(self):
-		return f'HTTPDriver(...)'
+		return self.url

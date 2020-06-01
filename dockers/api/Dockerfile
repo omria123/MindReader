@@ -17,6 +17,6 @@ WORKDIR ../
 COPY ./requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-CMD ["python", "-m", "MindReader.api", "run-server-api", "mongo://database:27017"]
+CMD ["python", "-m", "MindReader.api", "run-server-api", "mongo://pipeline-database:27017"]
 
 

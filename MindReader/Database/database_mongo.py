@@ -31,7 +31,9 @@ class MongoDatabase:
 	def __init__(self, host, port=None):
 		if port is None:
 			port = self.DEFAULT_PORT
+		self.host, self.port = host, port
 		try:
+
 			client = pymongo.MongoClient(host, int(port), connect=False)
 		except Exception as e:
 			logger.error('Couldnt connect to DB')
@@ -134,8 +136,8 @@ class MongoDatabase:
 			'timestamp': snapshot['timestamp'],
 			'snapshot_id': snapshot['snapshot_id']}
 
-	def __repr__(self):
-		pass
-
 	def __str__(self):
-		return
+		return f'{self.scheme}://{self.host}:{self.port}'
+
+	def __repr__(self):
+		return f'MongoDatabase({str(self)})'
