@@ -1,3 +1,5 @@
+import json
+
 import pymongo
 
 import logging
@@ -22,17 +24,17 @@ class MongoDatabase:
 		self.db = db
 		logger.info(f'Connected to DB {host}:{port}')
 
-	def save(self, data):
+	def save(self, name, data):
 		"""
 		:param data: A dict which must have the following structure:
-		{'user_id': ..., 'datetime': ..., result_name: {'result': ..., 'result_data': (Optional - URL/Path to the file)}}.
+		{'user_id': ..., 'timestamp': ..., result_name: {'result': ..., 'result_data': (Optional - URL/Path to the file)}}.
 		"""
-
+		logger.info(f'Got new message to save - from {name}')
 		snapshots = self.db.snapshots
 		# Assuming to be one to one the identification to be 1-to-1.
 		snapshot_identification = {
 			'user_id': data['user_id'],
-			'datetime': data['snapshot_id'],
+			'timestamp': data['timestamp'],
 			'snapshot_id': data['snapshot_id']}
 
 		snapshot = snapshots.find_one(snapshot_identification)
@@ -41,9 +43,10 @@ class MongoDatabase:
 			snapshots.insert_one(data)
 			return
 
+		result_dict = snapshot['result']
+		result_dict[name] = data
 
-		snapshot.update({})
-
+		snapshots.update_one(snapshot_identification, {'$set': {'result': json.dumps(result_dict)}})
 		logger.debug('Snapshot have been updated')
 
 	def save_user(self, user: dict):
@@ -70,14 +73,13 @@ class MongoDatabase:
 		user = self.get_user(user_id)
 		user_snapshots = self.db.snapshots.find({'user_id': user_id})
 
-		def extract_metadata(snapshot):
+		def extract_basic_info(snapshot):
 			return {
-				'timestamp': snapshot['datetime'],
-				'results': list(snapshot['result'].keys()),
-				'user_id': snapshot['user_id']
-			}
+				'datetime': snapshot['datetime'],
+				'user_id': snapshot['user_id'],
+				'snapshot_id': snapshot['snapshot_id']}
 
-		return user, list(map(extract_metadata, user_snapshots))
+		return user, list(map(extract_basic_info, map(self.fix_snapshot_result, user_snapshots)))
 
 	def get_snapshot(self, user_id, snapshot_id):
 		user = self.get_user(user_id)
@@ -86,10 +88,24 @@ class MongoDatabase:
 		snapshot = self.db.snapshots.find_one({'user_id': user_id, 'snapshot_id': snapshot_id})
 		if snapshot is None:
 			return user, None
-		return user, [snapshot['datetime'], snapshot['snapshot_id'], snapshot['result']]
+
+		def extract_metadata(full_snapshot):
+			return {
+				'datetime': full_snapshot['datetime'],
+				'user_id': full_snapshot['user_id'],
+				'snapshot_id': full_snapshot['snapshot_id'],
+				'results': list(full_snapshot['result'].keys()),
+			}
+
+		return user, extract_metadata(self.fix_snapshot_result(snapshot))
 
 	def get_snapshot_result(self, user_id, snapshot_id, result_name):
 		user, snapshot = self.get_snapshot(user_id, snapshot_id)
 		if snapshot is None or user is None:
 			return user, snapshot, None
-		return user, snapshot, snapshot['result'][result_name]
+		return user, snapshot, snapshot['result']['snapshot']
+
+	@staticmethod
+	def fix_snapshot_result(snapshot):
+		snapshot['result'] = json.loads(snapshot['result'])
+		return snapshot

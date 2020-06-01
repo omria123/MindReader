@@ -257,6 +257,13 @@ Where the file is not one of the default test modules (It's name doesn't start w
 
 Those tests use Message Queue and the Databases as dockers, and for sync they use a lot of sleep.
 
+
+## LOGGING
+
+The logging settings are stored in MindReader/utils/log.ini
+
+You can change the logging level for any logger (A logger for every module) as you wish.
+
 ## MAINTENANCE 
 
 For all the subpackages there is a documentation for this in each dunder-init.py.

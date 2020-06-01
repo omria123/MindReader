@@ -27,8 +27,7 @@ def test_client_db(cli_server, db, mq, sample_factory, all_workers):
 			IOAccess.write(sample_file, 'sample', user, sample_snapshots)
 			sample_file.seek(0)
 			upload_sample(sample_file, cli_server.host, cli_server.port, scheme='object')
-		time.sleep(15)
-		print('Start killing....')
+		time.sleep(8)
 		for pid in open_pids:
 			os.kill(pid, signal.SIGINT)
 
@@ -44,6 +43,12 @@ def test_client_db(cli_server, db, mq, sample_factory, all_workers):
 	# Start client
 	open_pids.append(os.getpid())
 	Process(target=run_client).start()
+
+	try:
+		while 1:
+			time.sleep(1)
+	except KeyboardInterrupt:
+		print('Everything is done can start testing')
 
 	try:
 		while 1:

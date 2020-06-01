@@ -76,26 +76,31 @@ class RabbitMQ:
 		Passing the parser every field it needs from the snapshot, and publishes the result.
 		"""
 
-		def callback(channel, method, properties, body):
-			logger.info('New raw snapshot received')
-			raw_snapshot_path = Path(body.decode())
-			user_id = str(raw_snapshot_path.parent.parent.name)
-			snapshot_id = str(raw_snapshot_path.parent.name)
+		def parser_callback(result_name, handler):
+			def callback(channel, method, properties, body):
+				logger.info(f'New raw snapshot received for parser {result_name}')
+				raw_snapshot_path = Path(body.decode())
 
-			db_result = parser(raw_snapshot_path)
-			if db_result is None:  # Nothing to publish
+				user_id = str(raw_snapshot_path.parent.parent.name)
+				snapshot_id = str(raw_snapshot_path.parent.name)
+
+				db_result = handler(raw_snapshot_path)
+				if db_result is None:  # Nothing to publish
+					channel.basic_ack(delivery_tag=method.delivery_tag)
+					return
+				logger.debug('Finished the parsing')
+				db_result.update({'snapshot_id': snapshot_id, 'user_id': user_id})
+				self.publish_result({'save': db_result, 'name': name}, channel=channel)
+
 				channel.basic_ack(delivery_tag=method.delivery_tag)
-				return
 
-			db_result.update({'snapshot_id': snapshot_id, 'user_id': user_id})
-			self.publish_result(db_result, channel=channel)
+			return callback
 
-			channel.basic_ack(delivery_tag=method.delivery_tag)
-
+		logger.info(f'Assigning new parser - {name}')
 		self.channel.exchange_declare(exchange='raw_snapshot', exchange_type='fanout')
 		self.channel.queue_declare(queue=name, durable=True)
 		self.channel.queue_bind(queue=name, exchange='raw_snapshot')
-		self.channel.basic_consume(queue=name, on_message_callback=callback)
+		self.channel.basic_consume(queue=name, on_message_callback=parser_callback(name, parser))
 
 		if start_consuming:
 			self.consume()
@@ -107,15 +112,12 @@ class RabbitMQ:
 
 		@body_json
 		def callback(channel, method, properties, body):
-			logger.info('Got new message to save')
-			logger.debug(body)
 			if 'gender' and 'birthday' in body:  # Save user
-				logger.info('Saving user...')
+				logger.debug('Saving user...')
 				saver.save_user(body)
 			else:
-				logger.info('Saving snapshot....')
-				name = body
-				saver.save(name, body)
+				logger.debug('Saving snapshot....')
+				saver.save(body['name'], body['save'])
 			channel.basic_ack(delivery_tag=method.delivery_tag)
 
 		logger.info('New Saver is assigned')
@@ -127,7 +129,10 @@ class RabbitMQ:
 
 	def consume(self):
 		logger.info('Starts consuming...')
-		self.channel.start_consuming()
+		try:
+			self.channel.start_consuming()
+		except KeyboardInterrupt:
+			pass
 
 	def close(self):
 		self.connection.close()

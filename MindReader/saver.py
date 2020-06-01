@@ -24,12 +24,11 @@ class Saver:
 		Saves the published data to the DB.
 
 		:param name: The name of the data being saved (i.e. the name of the appropriate parser)
-		Note: This is useless and exists in the signature for future comparability and for the requirements of the API
 		:param data: Dictionary of the form:
 		{'user_id': ..., 'datetime': ..., name: {'result': ... , 'result_data': (URL/Path to binary file)}
 
 		"""
-		self.database.save(data)
+		self.database.save(name, data)
 
 	def save_user(self, user):
 		"""

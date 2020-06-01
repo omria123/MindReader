@@ -75,6 +75,18 @@ def bound_amount(l, bound=MAX_POSTS):
 		return l[counter:]
 
 
+def db_not_found(user, snapshot=1, result=1):
+	if user is None:
+		logger.debug('The user doesn\'t exists')
+		return f'No such user in the db', 404
+	if snapshot is None:
+		logger.debug('The user has no such snapshot')
+		return f'The user has no such snapshot in the db', 404
+	if result is None:
+		logger.debug('The snapshot has no such result name')
+		return f'The requested result doesn\'t exist', 404
+
+
 ########################
 # API PATHS
 ########################
@@ -84,7 +96,7 @@ def bound_amount(l, bound=MAX_POSTS):
 @handle_db_fail(logger)
 def get_users():
 	logger.info('List of the users has been requested')
-	return jsonify(g.database.get_users()), 200
+	return jsonify(g.database.get_users())
 
 
 @app.route('/users/<user_id>')
@@ -93,11 +105,7 @@ def get_user(user_id):
 	logger.info('User has been requested')
 	logger.debug(f'{user_id=}')
 	user_details = g.database.get_user(user_id)
-
-	if user_details is None:
-		logger.debug('The user doesn\'t exists')
-		return f'No user with user id {user_id}', 404
-	return user_details, 200
+	return db_not_found(user_details) or jsonify(user_details)
 
 
 @app.route('/users/<user_id>/snapshots')
@@ -108,10 +116,7 @@ def get_snapshots(user_id):
 
 	snapshots = g.database.get_snapshots(user_id)
 
-	if snapshots is None:
-		logger.debug('The user doesn\'t exists')
-		return f'No user with user id {user_id}', 404
-	return jsonify(snapshots), 200
+	return db_not_found(snapshots) or jsonify(snapshots)
 
 
 @app.route('/users/<user_id>/snapshots/<snapshot_id>')
@@ -121,13 +126,7 @@ def get_snapshot(user_id, snapshot_id):
 	logger.debug(f'{user_id=}, {snapshot_id=}')
 
 	user, snapshot = g.database.get_snapshot(user_id, snapshot_id)
-	if user is None:
-		logger.debug('The user doesn\'t exists')
-		return f'No user with user id {user_id}', 404
-	if snapshot is None:
-		logger.debug('The user has no such snapshot')
-		return f'The user has no such snapshot with id {snapshot_id}', 404
-	return jsonify(snapshot), 200
+	return db_not_found(user, snapshot) or jsonify(snapshot)
 
 
 @app.route('/users/<user_id>/snapshots/<snapshot_id>/<result_name>')
@@ -136,16 +135,7 @@ def get_snapshot_result(user_id, snapshot_id, result_name):
 	logger.info('Snapshot\'s result data has been requested')
 	logger.debug(f'{user_id=}, {snapshot_id=}, {result_name=}')
 	user, snapshot, result = g.database.get_snapshot_result_data(user_id, snapshot_id, result_name)
-	if user is None:
-		logger.debug('The user doesn\'t exists')
-		return f'No user with user id {user_id}', 404
-	if snapshot is None:
-		logger.debug('The user has no such snapshot')
-		return f'The user has no such snapshot with id {snapshot_id}', 404
-	if result is None:
-		logger.debug('The snapshot has no such result name')
-		return f'The snapshot has no available {result_name} binary data', 404
-	return jsonify(result)
+	return db_not_found(user, snapshot, result) or jsonify(result)
 
 
 @app.route('/users/<user_id>/snapshots/<snapshot_id>/<result_name>/data')
@@ -156,17 +146,9 @@ def get_snapshot_result_data(user_id, snapshot_id, result_name):
 
 	user, snapshot, result = g.database.get_snapshot_result_data(user_id, snapshot_id, result_name)
 
-	if user is None:
-		logger.debug('The user doesn\'t exists')
-		return f'No user with user id {user_id}', 404
-
-	if snapshot is None:
-		logger.debug('The user has no such snapshot')
-		return f'The user has no such snapshot with id {snapshot_id}', 404
-
-	if result is None:
-		logger.debug('The snapshot has no such result name')
-		return f'The snapshot has no available {result_name}', 404
+	response = db_not_found(user, snapshot, result)
+	if response is not None:
+		return response
 
 	with IOAccess.open(result[result_name]['location'], mode='rb') as fd:
 		return fd.read(), 200
