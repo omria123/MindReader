@@ -1,19 +1,74 @@
-<!doctype html>
-<html lang="he">
-
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>Mind Reader - User {% block username %}</title>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <link rel="stylesheet" href="https://stackpath.bootsrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
-          integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
-</head>
-
-<body>
+{% extends 'base.html' %}
 
 
-</body>
+{% block search %}{% endblock %}
+
+{% block title %} - User {% endblock %}
+
+{% block content %}
+    <section class="jumbotron text-center">
+        <div class="container">
+            <h1 class="jumbotron-heading">User - {{ username }}</h1>
+            <p class="lead text-muted">Here you can find out about all the crazy things {{ username }}
+                has experienced in the last days. Enjoy!!
+            </p>
+        </div>
+    </section>
 
 
-</html>
+    <section class="jumbotrom text-center">
+        <div class="album py-5 bg-light">
+            <div class="container">
+                <div class="row">
+                    {% for snapshot in snapshots %}
+                        <div class="card mb-4 box-shadow">
+                            <img class="card-img-top" src="{{ snapshot['funny'] }}" alt="Evolution"
+                                 style="height: 225px; width: 100%; display: block;">
+
+                            <div class="card-body">
+
+                                <p class="card-body">
+                                    While scanning the brain we have found in snapshot -
+                                    ID {{ snapshot['snapshot_id'] }}<br/>
+
+                                    {% for result in snapshot['results'] %}
+                                        - {{ result }} <br/>
+                                    {% endfor %}
+                                </p>
+
+                                <a href="/snapshot?snapshot_id={{ snapshot['snapshot_id'] }}&user_id={{ user_id }}">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick=>See more
+                                    </button>
+                                </a>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">{{ snapshot['timestamp'] }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+    </section>
+    <footer>
+        <nav aria-label="Page navigation example">
+            <ul class="pagination">
+                {% if page>1 %}
+                    <li class="page-item"><a class="page-link" href="/user?user_id={{ user_id }}&page={{ page-1 }}">Previous</a>
+                    </li>
+                {% endif %}
+
+                <li class="page-item"><a class="page-link" href="#">{{ page }}</a></li>
+
+                {% if next_page %}
+                    <li class="page-item"><a class="page-link"
+                                             href="/user?user_id={{ user_id }}&page={{ page +1}}">Next</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </footer>
+
+{% endblock %}
+

@@ -4,8 +4,9 @@ import logging
 import click
 
 from .defaults import SERVER_DEFAULT_HOST, SERVER_DEFAULT_PORT
-from .utils import Connection, log_error
-from MindReader.IOAccess import object_readers, read_url, DRIVERS
+from .IOAccess import object_readers, read_url, DRIVERS
+from .protocol import Connection
+from .utils import log_error
 
 logger = logging.getLogger('client')
 available_schemes = list(DRIVERS.keys())

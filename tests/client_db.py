@@ -19,6 +19,8 @@ def test_client_db(cli_server, db, mq, sample_factory, all_workers):
 	user, snapshots = sample_factory(amount)
 	sample_snapshots, compare_snapshots = itertools.tee(snapshots)
 	open_pids = []
+	sample_snapshots = list(sample_snapshots)
+	compare_snapshots = list(compare_snapshots)
 
 	# Client prep
 	def run_client():
@@ -27,7 +29,7 @@ def test_client_db(cli_server, db, mq, sample_factory, all_workers):
 			IOAccess.write(sample_file, 'sample', user, sample_snapshots)
 			sample_file.seek(0)
 			upload_sample(sample_file, cli_server.host, cli_server.port, scheme='object')
-		time.sleep(8)
+		time.sleep(7)
 		for pid in open_pids:
 			os.kill(pid, signal.SIGINT)
 
@@ -50,11 +52,6 @@ def test_client_db(cli_server, db, mq, sample_factory, all_workers):
 	except KeyboardInterrupt:
 		print('Everything is done can start testing')
 
-	try:
-		while 1:
-			time.sleep(1)
-	except KeyboardInterrupt:
-		print('Everything is done can start testing')
 
 	# Testing
 	db_handler = db()
@@ -62,13 +59,11 @@ def test_client_db(cli_server, db, mq, sample_factory, all_workers):
 	assert MessageToDict(user, preserving_proto_field_name=True, including_default_value_fields=True,
 	                     use_integers_for_enums=True) == db_user
 	counter = 0
-
 	for compare_snapshot in compare_snapshots:
 		counter += 1
 		success = False
 		for db_snapshot in db_snapshots:
-			print(db_snapshot)
-			assert db_snapshot['user_id'] != user.user_id
+			assert db_snapshot['user_id'] == str(user.user_id)
 			if db_snapshot['timestamp'] != compare_snapshot.datetime:
 				continue
 			success = True

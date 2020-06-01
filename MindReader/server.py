@@ -4,7 +4,8 @@ from pathlib import Path
 
 import click
 
-from .utils import listener, log_error
+from .utils import log_error
+from .protocol import listener
 from . import utils
 from . import IOAccess, MessageQueue
 from .defaults import SERVER_DEFAULT_HOST, SERVER_DEFAULT_PORT, DATA_DIR
@@ -34,6 +35,7 @@ def cli(debug, no_logging):
 @click.option('-h', '--host', default=SERVER_DEFAULT_HOST, help='Host to bind')
 @click.option('-p', '--port', default=SERVER_DEFAULT_PORT, type=int)
 @click.option('--data-dir', help='Where to store snapshot for further analysis', default=DATA_DIR)
+@log_error(logger)
 def cli_run_server(mq_url, host, port, data_dir):
 	"""
 	Listens for snapshot uploads via HTTP:POST requests.
@@ -73,7 +75,7 @@ def run_server_publisher(host, port, publish_user=None, publish_snapshot=None):
 	"""
 	listener.config_publishers(publish_user, publish_snapshot)
 	try:
-		listener.listener(host, port)
+		listener.Listener(host, port)
 	except KeyboardInterrupt:
 		logging.info('Got SIGINT Exiting...')
 
@@ -103,7 +105,6 @@ def handle_snapshot(user_id, snapshot, data_dir, mq):
 
 	with open(snapshot_raw_path, 'wb') as fd:
 		fd.write(raw_snapshot)
-
 	mq.publish_snapshot(str(snapshot_raw_path))
 
 	logger.info('Sever published the snapshot successfully')

@@ -1,25 +1,37 @@
 <!doctype html>
 <html lang="he">
-
 <head>
+    <link>
     <meta charset="utf-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>Mind Reader {% block title %}{% endblock %}</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <link rel="stylesheet" href="https://stackpath.bootsrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
-          integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
-    {% block script%}{% endblock %}
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+    <!-- Animate CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
 </head>
 
 <body>
 <nav class="navbar navbar-light bg-light justify-content-between">
-    <a class="navbar-brand" href="/">MindReader</a>
+    <a class="navbar-brand" href="/" id="">MindReader</a>
     <form class="form-inline" action="/search" method="get">
-        <input class="form-control mr-sm-2" type="search" placeholder="User ID" aria-label="Search" name="pharse">
+        <input class="form-control mr-sm-2" type="search" placeholder="username" aria-label="Search" name="phrase" {% block search %}{% endblock %}}>
         <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
     </form>
 </nav>
+
+<!-- sticky-top navbar displaying the counter -->
+
+
 <div id="page-content">
     {% block content %}{% endblock %}
 </div>
+
 </body>
+
 </html>

@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 
 from .. import IOAccess, MessageQueue
+from ..utils import log_error
 
 logger = logging.getLogger('parsers')
 
@@ -54,16 +55,17 @@ def parser(name=None):
 	return decorator
 
 
+@log_error(logger)
 def parse(snapshot_path, result_name):
 	"""Parses a message"""
 	snapshot_path = Path(snapshot_path)
 	version = snapshot_path.suffix[1:]
 
 	if version not in IOAccess.object_readers('snapshot'):
-		logger.error('The snapshot encoding is not supported')
+		logger.error(f'The snapshot encoding {version} is not supported')
 		return
 	if result_name not in PARSERS:
-		logger.error('Bad result name: no such parser')
+		logger.error(f'Bad result name: no such parser - {result_name}')
 		return
 
 	selected_parser = PARSERS[result_name]
@@ -88,7 +90,6 @@ def parse(snapshot_path, result_name):
 
 	result = selected_parser(**args)
 
-	logger.info('Parser finished')
 	logger.debug(f'Parser returned {result}')
 
 	published_result = {
@@ -98,12 +99,13 @@ def parse(snapshot_path, result_name):
 	if 'output' in args:
 		published_result['result'][result_name]['location'] = output_path
 		output = args['output']
-		published_result['result'][result_name]['Content-Length'] = output.seek(0, 2)
+		published_result['result'][result_name]['metadata']['Content-Length'] = output.seek(0, 2)
 		output.close()
 
 	return published_result
 
 
+@log_error(logger)
 def run_parsers(mq, parsers, is_url=True, start_consuming=True):
 	"""
 	Runs the parsers to the mq.
@@ -113,7 +115,7 @@ def run_parsers(mq, parsers, is_url=True, start_consuming=True):
 		mq = MessageQueue.MessageQueue(mq)
 
 	for name in parsers:
-		mq.run_parser(name, lambda path: parse(path, name), start_consuming=False)
+		mq.run_parser(name, parse, start_consuming=False)
 
 	if start_consuming:
 		mq.consume()

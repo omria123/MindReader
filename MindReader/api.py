@@ -1,18 +1,45 @@
+"""
+Apologies for the horrible code in this module, I am new to web programming,
+and it's have been frustrating to handle some of the concepts here.
+"""
+
+import datetime as dt
 import functools
+import io
+import itertools
 import logging
+import random
 
 import click
-from flask import Flask, jsonify, request, redirect, url_for, g, render_template
+import pathlib
+from flask import Flask, jsonify, request, redirect, render_template, send_file
+from flask_cors import CORS
+import timeago
 
-from .utils import log_error
+from .utils import log_error, HTTP_HEADERS
+from .Database import Database
 from . import IOAccess
 from .defaults import API_DEFAULT_PORT, API_DEFAULT_HOST
 
 app = Flask(__name__)
-
+CORS(app)
 logger = logging.getLogger('API')
 
-MAX_POSTS = 20
+MAX_POSTS = 30
+database_handler = None
+cur_dir = str(pathlib.Path(__file__).parent)
+
+# SOURCES
+brains = [f'/static/brains/brain{x}_tn.jpg' for x in range(1, 5)]
+cards = [
+	"card border-primary",
+	"card border-secondary",
+	"card border-success",
+	"card border-danger",
+	"card border-warning",
+	"card border-info",
+	"card border-light",
+	"card border-dark"]
 
 
 ########################
@@ -31,9 +58,12 @@ def cli_run_api_server(host, port, database):
 	"""
 	Runs the server to access the DATABASE
 	"""
-
-	g.database = database
+	global database_handler
 	logging.getLogger('werkzeug').disabled = True  # Don't want the weird Flask logger
+
+	logger.debug(f'Connecting to DB {database}')
+	database_handler = Database(database)
+	logger.info(f'Start listening on {host}:{port}')
 	app.run(host=host, port=port)
 
 
@@ -95,103 +125,207 @@ def db_not_found(user, snapshot=1, result=1):
 @app.route('/users')
 @handle_db_fail(logger)
 def get_users():
-	logger.info('List of the users has been requested')
-	return jsonify(g.database.get_users())
+	logger.debug('List of the users has been requested')
+
+	def basic_user_info(user):
+		return {
+			'username': user['username'],
+			'user_id': user['user_id']
+		}
+
+	return jsonify(list(map(basic_user_info, database_handler.get_users())))
 
 
 @app.route('/users/<user_id>')
 @handle_db_fail(logger)
 def get_user(user_id):
-	logger.info('User has been requested')
-	logger.debug(f'{user_id=}')
-	user_details = g.database.get_user(user_id)
+	logger.debug(f'User {user_id} has been requested')
+	user_details = database_handler.get_user(user_id)
 	return db_not_found(user_details) or jsonify(user_details)
 
 
 @app.route('/users/<user_id>/snapshots')
 @handle_db_fail(logger)
 def get_snapshots(user_id):
-	logger.info('User\'s snapshot list has been requested')
-	logger.debug(f'{user_id=}')
+	logger.debug(f'Snapshot list user with {user_id=} ')
+	snapshots = database_handler.get_snapshots(user_id)
 
-	snapshots = g.database.get_snapshots(user_id)
+	def extract_basic_info(snapshot):
+		return {
+			'timestamp': snapshot['timestamp'],
+			'user_id': snapshot['user_id'],
+			'snapshot_id': snapshot['snapshot_id']
+		}
 
-	return db_not_found(snapshots) or jsonify(snapshots)
+	return db_not_found(snapshots) or jsonify(list(map(extract_basic_info, snapshots)))
 
 
 @app.route('/users/<user_id>/snapshots/<snapshot_id>')
 @handle_db_fail(logger)
 def get_snapshot(user_id, snapshot_id):
-	logger.info('Snapshot has been requested')
-	logger.debug(f'{user_id=}, {snapshot_id=}')
+	logger.debug(f'Snapshot has been requested for {user_id=}, {snapshot_id=}')
 
-	user, snapshot = g.database.get_snapshot(user_id, snapshot_id)
-	return db_not_found(user, snapshot) or jsonify(snapshot)
+	def extract_metadata(full_snapshot):
+		return {
+			'timestamp': full_snapshot['timestamp'],
+			'user_id': full_snapshot['user_id'],
+			'snapshot_id': full_snapshot['snapshot_id'],
+			'results': list(full_snapshot['result'].keys()),
+		}
+
+	user, snapshot = database_handler.get_snapshot(user_id, snapshot_id)
+	return db_not_found(user, snapshot) or jsonify(extract_metadata(snapshot))
 
 
 @app.route('/users/<user_id>/snapshots/<snapshot_id>/<result_name>')
 @log_error(logger)
 def get_snapshot_result(user_id, snapshot_id, result_name):
-	logger.info('Snapshot\'s result data has been requested')
-	logger.debug(f'{user_id=}, {snapshot_id=}, {result_name=}')
-	user, snapshot, result = g.database.get_snapshot_result_data(user_id, snapshot_id, result_name)
+	logger.debug(f'Snapshot\'s {result_name} for {user_id=}, {snapshot_id=}  has been requested')
+	user, snapshot, result = database_handler.get_snapshot_result(user_id, snapshot_id, result_name)
 	return db_not_found(user, snapshot, result) or jsonify(result)
 
 
 @app.route('/users/<user_id>/snapshots/<snapshot_id>/<result_name>/data')
 @handle_db_fail(logger)
 def get_snapshot_result_data(user_id, snapshot_id, result_name):
-	logger.info('Snapshot\'s result has been requested')
-	logger.debug(f'{user_id=}, {snapshot_id=}, {result_name=}')
+	logger.debug(f'Snapshot\'s data has been requested for {user_id=}, {snapshot_id=}, {result_name=}')
 
-	user, snapshot, result = g.database.get_snapshot_result_data(user_id, snapshot_id, result_name)
+	user, snapshot, result = database_handler.get_snapshot_result(user_id, snapshot_id, result_name)
 
 	response = db_not_found(user, snapshot, result)
 	if response is not None:
 		return response
 
-	with IOAccess.open(result[result_name]['location'], mode='rb') as fd:
-		return fd.read(), 200
+	headers = {key: result['metadata'][key] for key in result['metadata'] if key in HTTP_HEADERS}
+	with IOAccess.open(result['location'], mode='rb') as fd:
+		return fd.read(), 200, headers
 
 
 ########################
 # GUI PATHS
 ########################
 
+
 @app.route('/')
+@log_error(logger)
 def index():
+	all_users = database_handler.get_users()
 	logger.info('New access to index page')
-	return render_template('index.html')
+	if len(all_users) == 0:
+		return render_template('empty.html')
+	nums = list(range(len(all_users)))
+	fields = sorted(list(all_users[0].keys()))  # The choice of user doesn't matter
+	all_users.sort(key=lambda user: int(user['user_id']))
+
+	def repr_user(user):
+		genders = {0: 'Male', 1: 'Female', 2: 'Other'}
+		user['gender'] = genders[user['gender']]
+		user['birthday'] = dt.datetime.fromtimestamp(user['birthday']).strftime('%d.%m.%Y')
+		return user
+	all_users = list(map(repr_user, all_users))
+
+	return render_template('index.html', fields=fields, users=all_users, nums=nums, title='', phrase='')
 
 
 @app.route('/user')
+@log_error(logger)
 def user_page():
 	logger.info('Some user page was requested')
-	if 'id' not in request.args:
+	if 'user_id' not in request.args:
 		logger.debug('No id was given')
-		return redirect(url_for('index'))
-	user_id = request.args['id']
-	user_data = g.database.get_user(user_id)
-	if user_data is None:
-		logger.debug('The requested user doesn\'t exists')
-		return "The user doesn't exist", 404
+		return redirect('/')
+	user_id = request.args['user_id']
+	user = database_handler.get_user(user_id)
 
-	logger.debug(f'Returning user with {user_id=}, username={user_data["username"]}')
-	return user_data.foramt(user_data)
+	snapshots = database_handler.get_snapshots(user_id)
+
+	response = db_not_found(snapshots)
+
+	if response is not None:
+		return response
+	amount = database_handler.get_snapshots_amount(user_id)
+	page = 1
+
+	if 'page' in request.args:
+		page = int(request.args['page'])
+
+	snapshots = itertools.islice(snapshots, (page - 1) * MAX_POSTS, page * MAX_POSTS)
+
+	def format_snapshot(snapshot):
+		epoch_time = int(snapshot['timestamp']) / 1000
+		st_time = timeago.format(dt.datetime.fromtimestamp(epoch_time), dt.datetime.now())
+		# Convert to time ago.
+		return {
+			'snapshot_id': snapshot['snapshot_id'],
+			'timestamp': st_time,
+			'results': list(snapshot['result'].keys()),
+			'funny': random.choice(brains)
+		}
+
+	result_snapshots = list(map(format_snapshot, snapshots))
+	return render_template('user.html',
+	                       username=user['username'],
+	                       user_id=user['user_id'],
+	                       snapshots=result_snapshots,
+	                       page=page, next_page=page * MAX_POSTS < amount)
+
+
+@app.route('/snapshot')
+def view_snapshot():
+	if 'snapshot_id' not in request.args or 'user_id' not in request.args:
+		return redirect('/')
+
+	user_id, snapshot_id = request.args['user_id'], request.args['snapshot_id']
+	user, snapshot = database_handler.get_snapshot(user_id, snapshot_id)
+
+	response = db_not_found(user, snapshot)
+	if response is not None:
+		return response
+
+	epoch_time = int(snapshot['timestamp']) / 1000  # ms to s
+	time_diff = timeago.format(dt.datetime.fromtimestamp(epoch_time), dt.datetime.now())
+	return render_template('snapshot.html', user_id=user_id, username=user['username'], snapshot=snapshot,
+	                       timeago=time_diff, pick_card=lambda: random.choice(cards))
 
 
 @app.route('/search')
+@log_error(logger)
 def search():
-	return render_template('search.html')
+	if 'phrase' in request.args:
+		phrase = request.args['phrase']
+	else:
+		return 'No phrase was given', 400
+	all_users = list(filter(lambda u: (phrase in u['username']), database_handler.get_users()))
+
+	logger.info(f'New search request, phrase - {phrase}')
+
+	if len(all_users) == 0:
+		return render_template('empty.html')
+
+	nums = list(range(len(all_users)))
+
+	fields = sorted(list(all_users[0].keys()))  # The choice of user doesn't matter
+	all_users.sort(key=lambda user: int(user['user_id']))
+
+	return render_template('index.html', fields=fields, users=all_users, nums=nums, title=' - search', phrase=phrase)
 
 
-@app.route('/load')
-def load():
+@app.route('/static/brains/<image_name>')
+@log_error(logger)
+def brain(image_name):
+	with open(f'{cur_dir}/static/brains/{image_name}', 'rb')as fd:
+		image_binary = fd.read()
+	return send_file(io.BytesIO(image_binary), mimetype='imgae/jpeg')
+
+
+@app.route('/load_users')
+@log_error(logger)
+def load_users():
 	phrase = ''
 	if 'phrase' in request.args:
 		phrase = request.args['phrase']
-	users = get_users()
-	return jsonify(bound_amount([(name, uid) for name, uid in users if phrase in name]))
+
+	return jsonify([user for user in database_handler.get_users() if phrase in user['username']])
 
 
 if __name__ == '__main__':

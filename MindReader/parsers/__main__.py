@@ -1,5 +1,5 @@
 import click
-from .manager import PARSERS, parse, run_parsers
+from .manager import PARSERS, parse, run_parsers, logger
 
 available = list(PARSERS.keys())
 
@@ -14,11 +14,13 @@ def cli():
 @click.option('-n', '--name', 'parsers', multiple=True)
 def run_parser(mq_url, parsers):
 	f"""
-	Run a parser for NAME (from {available}), to work with message queue at MQ-URL.
+	Run a parser for names (from {available}), to work with message queue at MQ-URL.
+	If no NAME was mentioned all of them will be used (As one instance).
 	"""
+	logger.info(f'Running parsers for {parsers}')
+
 	if len(parsers) == 0:
-		print('No parser was given!')
-		return
+		parsers = available
 	run_parsers(mq_url, parsers)
 
 
@@ -31,3 +33,7 @@ def cli_parse(path, name):
 	Note: The PATH suffix represents the snapshot encoding.
 	"""
 	print(parse(name, path))
+
+
+if __name__ == '__main__':
+	cli()

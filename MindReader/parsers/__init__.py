@@ -11,7 +11,7 @@ decorator.
 3. The parser function name must endswith parser
 4. The parser must return the value as a jsonable value.
 5. The parser can specify the special argument output, to write binary blob.
-5.a. The parser can return in it's answer a dict {'Content-Type': ...}. This helps the API to expose a richer metadata
+5.a. The parser should return in it's answer a dict {'Content-Type': ...}. This helps the API to expose a richer metadata
 on the result.
 Note: The fields has to be main fields of a snapshot.
 """
@@ -20,3 +20,4 @@ from .manager import parser, parse, PARSERS, run_parsers
 from .manager import _collect_parsers
 
 _collect_parsers()
+

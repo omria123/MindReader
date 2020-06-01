@@ -2,7 +2,6 @@ import logging
 
 from .. import IOAccess
 
-
 logger = logging.getLogger('connection')
 
 
@@ -22,18 +21,17 @@ class Connection:
 		if any(field not in user for field in self.USER_MUST_FIELDS):
 			logger.error('User had a missing field')
 			raise ValueError('Invalid user')
+		logger.info(f'New connection created to host {self.url_basis}')
 
 		self.register_user(user)
 		self.user = user
-		logger.info('New connection created')
-		logger.debug(f'The host is {self.url_basis}')
 
 	def register_user(self, user):
 		"""
 		Register a user to the server, and get fields available
 		:param user: User dict.
 		"""
-		logger.info('Registering user')
+		logger.info('Registering user....')
 		headers = {'Content-Type': 'application/json'}
 
 		try:
@@ -46,6 +44,7 @@ class Connection:
 			raise ConnectionError(f'Couldn\'t upload user to {self.url_basis + self.REGISTER}')
 
 		self.fields = response.json()
+		logger.info('User registered')
 		logger.debug(f'The accepted fields by the server are {self.fields}')
 
 	def upload(self, snapshot):
@@ -53,7 +52,7 @@ class Connection:
 		Uploads a single snapshot using HTTP REST API.
 		:param snapshot: Snapshot object which holds in it's attributes the different fields.
 		"""
-		logger.info('Uploading a snapshot')
+		logger.debug('Uploading a snapshot')
 		# Since there is no alternative format for now this is fine, in the future this can be easily converted to
 		# a configurable attribute
 		headers = {'UserId': str(self.user['user_id']), 'Content-Type': 'application/protobuf'}
@@ -62,7 +61,7 @@ class Connection:
 		                              driver_kwargs=driver_kwargs, version='protocol_protobuf', fields=self.fields)
 
 		if response.status_code == 200:
-			logger.info('Snapshot was successfully uploaded')
+			logger.debug('Snapshot was successfully uploaded')
 			return
 		logger.error(f'The server returned {response.status_code} - {response.text}')
 		raise ConnectionError('Couldn\'t upload snapshot')

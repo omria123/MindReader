@@ -198,7 +198,7 @@ The package provides the following Interface:
     mq.publish_user(user)
     ...
     ```
- - IOAccess
+- IOAccess
     This subpackage offers abstraction for all read/write operations.
     
     The subpackage offer 3 different utilities:
@@ -239,7 +239,7 @@ The package provides the following Interface:
         ```
         
         The access_url functions are used for the comfort of the user.
-   
+
 
 ## TESTING
 

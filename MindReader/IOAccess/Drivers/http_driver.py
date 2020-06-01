@@ -25,7 +25,7 @@ class HTTPDriver:
 		:param headers: Optional - Headers to give the request.
 		:param requests: Optional - Injected 'requests' module
 		"""
-		self.url = url.split('://', 1)[-1]
+		self.url = self.SCHEME + url.split('://', 1)[-1]
 		self.mode = mode
 		self.headers = {} if headers is None else headers
 		self.body = BytesIO() if 'b' in mode else StringIO()
@@ -33,12 +33,12 @@ class HTTPDriver:
 
 		if 'r' not in mode:
 			logger.info('New POST file is open')
-			logger.debug(f'URL={url}')
+			logger.debug(f'URL={self.url}')
 
 		else:
 			logger.info('New GET file is open')
-			self.response = self.requests.get(url, headers=self.headers)
-			logger.debug(f'URL={url}, body size- {len(self.response.text)}')
+			self.response = self.requests.get(self.url, headers=self.headers)
+			logger.debug(f'URL={self.url}, body size- {len(self.response.text)}')
 
 			if 'b' in mode:
 				self.body = BytesIO(self.response.text.encode())
@@ -95,7 +95,7 @@ class HTTPDriver:
 		:param keep_body: Should I keep the body for next flush?
 		"""
 		logger.debug(f'Sending POST to {self.url} with body of size {len(self.body.getvalue())}')
-		self.response = self.requests.post(url=self.SCHEME + self.url, data=self.body.getvalue(), headers=self.headers)
+		self.response = self.requests.post(self.url, data=self.body.getvalue(), headers=self.headers)
 		logger.debug(f'The length of the response is {len(self.response.text)}')
 		if not keep_body:
 			self.body = BytesIO() if 'b' in StringIO() else ''
@@ -110,3 +110,12 @@ class HTTPDriver:
 		if 'w' not in self.mode:  # Read mode does nothing
 			return
 		return self.flush(keep_headers=True)
+
+	def __repr__(self):
+		method = 'GET'
+		if 'w' in self.mode:
+			method = 'POST'
+		return f'HTTPDriver(url={self.url}, {method=})',
+
+	def __str__(self):
+		return f'HTTPDriver(...)'

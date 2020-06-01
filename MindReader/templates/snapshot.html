@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block search %}{% endblock %}
+
+{% block title %} - Snapshot {% endblock %}
+
+{% block content %}
+
+    <section class="jumbotron text-center">
+        <div class="container">
+            <h1 class="jumbotron-heading">Snapshot - {{ snapshot['snapshot_id'] }}</h1>
+            <p class="lead text-muted">
+                Since you have gone so far, I see you are really interested in {{ username }}. <br/>
+                Told you I am a MindReader....
+            </p>
+        </div>
+    </section>
+    <section class="jumbotrom text-center">
+        <div class="album py-5 bg-light">
+
+            <div class="container">
+                <div class="row">
+
+                    {% for result_name in snapshot['result'] %}
+                        <div class="{{ pick_card() }} mb-5" style="max-width: 18rem;">
+                            <div class="card-header">{{ timeago }}</div>
+                            <div class="card-body">
+
+                                <h5 class="card-title">{{ result_name }}</h5>
+                                <p class="card-text">{{ snapshot['result'][result_name]['metadata'] }}
+                                </p>
+                                {% if 'location' in snapshot['result'][result_name] %}
+                                    <a href="/users/{{ user_id }}/snapshots/{{ snapshot['snapshot_id'] }}/{{ result_name }}/data">
+                                        <button type="button" class="btn btn-dark">Get Data</button>
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <footer>
+                <a href="/user?user_id={{ user_id }}">
+                    <button type="button" class="btn btn-primary">Back to user</button>
+                </a>
+            </footer>
+        </div>
+    </section>
+
+{% endblock %}
+

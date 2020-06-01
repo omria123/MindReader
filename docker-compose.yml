@@ -1,0 +1,46 @@
+version: '3'
+
+services:
+  message-queue:
+    image: rabbitmq
+    ports:
+      - 5672:5672
+
+  database:
+    image: mongo
+    ports:
+      - 27017:27017
+
+  server:
+    build: dockers/server
+    ports:
+      - 7000:7000
+    depends_on:
+      - message-queue
+    volumes:
+      - ./dockers/docker_data:/usr/src/app/data
+
+
+  api:
+    build: dockers/api
+    ports:
+      - 8080:8080
+    depends_on:
+      - database
+    volumes:
+      - ./dockers/docker_data:/usr/src/app/data
+
+  parser:
+    build: dockers/parser
+
+    depends_on:
+      - message-queue
+
+    volumes:
+      - ./dockers/docker_data:/usr/src/app/data
+
+  saver:
+    build: dockers/saver
+    depends_on:
+      - message-queue
+      - database

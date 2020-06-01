@@ -14,7 +14,10 @@ def color_image_parser(output, color_image):
 	image = Image.new('RGB', shape)
 	image.frombytes(color_image.data)
 	image.save(output, format=FORMAT)
-	return {'Content-Type': mimetypes.types_map[f'.{FORMAT}']}
+	return {
+		'Content-Type': mimetypes.types_map[f'.{FORMAT}'],
+		'height': color_image.height,
+		'width': color_image.width}
 
 
 color_image_parser.name = 'color_image'
