@@ -50,12 +50,13 @@ def test_client_db(cli_server, db, mq, sample_factory, all_workers):
 		while 1:
 			time.sleep(1)
 	except KeyboardInterrupt:
-		print('Everything is done can start testing')
-
+		pass
 
 	# Testing
 	db_handler = db()
-	db_user, db_snapshots = db_handler.get_snapshots(user.user_id)
+	db_user = db_handler.get_user(user.user_id)
+	db_snapshots = db_handler.get_snapshots(str(user.user_id))
+
 	assert MessageToDict(user, preserving_proto_field_name=True, including_default_value_fields=True,
 	                     use_integers_for_enums=True) == db_user
 	counter = 0

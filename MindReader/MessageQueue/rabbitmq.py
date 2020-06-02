@@ -9,6 +9,10 @@ logger = logging.getLogger('MessageQueue')
 
 
 def refresh_channel(f):
+	"""
+	Refresh the connection to the MQ.
+	"""
+
 	@functools.wraps(f)
 	def wrapper(self, *args, **kwargs):
 		self.connection = pika.BlockingConnection(pika.ConnectionParameters(self.host, self.port))
@@ -90,7 +94,6 @@ class RabbitMQ:
 		                      properties=pika.BasicProperties(delivery_mode=2))
 		logger.debug(f'New result published {result}')
 
-	@refresh_channel
 	def run_parser(self, name, parser, start_consuming=True):
 		"""
 		Running parser which feeds on the message queue.
@@ -126,7 +129,6 @@ class RabbitMQ:
 		if start_consuming:
 			self.consume()
 
-	@refresh_channel
 	def run_saver(self, saver, start_consuming=True):
 		"""
 		Assigns a saver to the Message Queue.

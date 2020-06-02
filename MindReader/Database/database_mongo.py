@@ -55,7 +55,6 @@ class MongoDatabase:
 		logger.info(f'Got new message to save - from {name}')
 		snapshots = self.db.snapshots
 		iden = self.snapshot_identification(data)
-
 		snapshot = snapshots.find_one(iden)
 		if snapshot is None:
 			logger.debug('Inserting new snapshot...')
