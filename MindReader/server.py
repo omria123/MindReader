@@ -23,7 +23,7 @@ logger = logging.getLogger('server')
 def cli():
 	if 'WAITFORIT' in os.environ and os.environ['WAITFORIT'] == '1':
 		time.sleep(10)
-	logger.error(os.environ)
+
 
 
 @cli.command(name='run-server')
