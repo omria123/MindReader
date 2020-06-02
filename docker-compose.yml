@@ -6,12 +6,16 @@ services:
     ports:
       - 5672:5672
     container_name: messagequeue
+    logging:
+      driver: none
 
   database:
     image: mongo
     ports:
       - 27017:27017
     container_name: database
+    logging:
+      driver: none
 
   server:
     image: server
