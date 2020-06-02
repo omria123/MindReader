@@ -4,7 +4,7 @@ RUN mkdir -p /usr/src/app/MindReader
 
 WORKDIR /usr/src/app/MindReader
 
-RUN ls
+ENV WAITFORIT=1
 
 COPY ./MindReader/defaults.py ./
 COPY ./MindReader/utils ./utils
@@ -21,4 +21,4 @@ COPY ./requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 
-CMD ["python", "-m", "MindReader.server", "run-server", "rabbitmq://pipeline-message-queue:5672", "--data-dir", "/usr/src/app/data"]
+CMD ["python", "-m", "MindReader.server", "run-server", "rabbitmq://messagequeue:5672", "--data-dir", "/usr/src/app/data", "--host", "0.0.0.0"]

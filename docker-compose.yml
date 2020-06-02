@@ -1,51 +1,50 @@
 version: '3'
 
 services:
-  pipeline-message-queue:
+  messagequeue:
     image: rabbitmq
     ports:
       - 5672:5672
-    container_name: pipeline-message-queue
+    container_name: messagequeue
 
-  pipeline-database:
+  database:
     image: mongo
     ports:
       - 27017:27017
-    container_name: pipeline-database
+    container_name: database
 
-  pipeline-server:
+  server:
     image: server
     ports:
       - 7000:7000
     depends_on:
-      - pipeline-message-queue
+      - messagequeue
     volumes:
       - ./dockers/docker_data:/usr/src/app/data
-    container_name: pipeline-server
+    container_name: server
 
-  pipeline-api:
+  api:
     image: api
     ports:
       - 8080:8080
     depends_on:
-      - pipeline-database
+      - database
     volumes:
       - ./dockers/docker_data:/usr/src/app/data
-    container_name: pipeline-api
+    container_name: api
 
-  pipeline-parser:
+  parser:
     image: parser
-
     depends_on:
-      - pipeline-message-queue
+      - messagequeue
 
     volumes:
       - ./dockers/docker_data:/usr/src/app/data
-    container_name: pipeline-parser
+    container_name: parser
 
-  pipeline-saver:
+  saver:
     image: saver
     depends_on:
-      - pipeline-message-queue
-      - pipeline-database
-    container_name: pipeline-saver
+      - messagequeue
+      - database
+    container_name: saver

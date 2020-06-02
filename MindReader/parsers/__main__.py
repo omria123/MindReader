@@ -1,12 +1,19 @@
+import os
+import time
+
 import click
+
 from .manager import PARSERS, parse, run_parsers, logger
+
 
 available = list(PARSERS.keys())
 
 
 @click.group()
 def cli():
-	pass
+	if 'WAITFORIT' in os.environ and os.environ['WAITFORIT'] == '1':
+
+		time.sleep(10)
 
 
 @cli.command(name='run-parser')

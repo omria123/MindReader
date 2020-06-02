@@ -48,9 +48,10 @@ class RabbitMQ:
 			self.connection = pika.BlockingConnection(pika.ConnectionParameters(host, int(port)))
 			self.channel = self.connection.channel()
 		except Exception as e:
+			self.connection = None
+			self.channel = None
 			logger.error('Couldnt connect to message queue')
 			logger.error(e)
-			raise e
 		logger.info('Message Queue connected')
 		logger.debug(f'The message queue is at {host}:{port}')
 
@@ -89,6 +90,7 @@ class RabbitMQ:
 		                      properties=pika.BasicProperties(delivery_mode=2))
 		logger.debug(f'New result published {result}')
 
+	@refresh_channel
 	def run_parser(self, name, parser, start_consuming=True):
 		"""
 		Running parser which feeds on the message queue.
@@ -124,6 +126,7 @@ class RabbitMQ:
 		if start_consuming:
 			self.consume()
 
+	@refresh_channel
 	def run_saver(self, saver, start_consuming=True):
 		"""
 		Assigns a saver to the Message Queue.

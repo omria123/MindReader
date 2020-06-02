@@ -8,10 +8,12 @@ import functools
 import io
 import itertools
 import logging
+import os
+import pathlib
 import random
+import time
 
 import click
-import pathlib
 from flask import Flask, jsonify, request, redirect, render_template, send_file
 from flask_cors import CORS
 import timeago
@@ -47,7 +49,8 @@ cards = [
 ########################
 @click.group()
 def cli():
-	pass
+	if 'WAITFORIT' in os.environ and os.environ['WAITFORIT'] == '1':
+		time.sleep(10)
 
 
 @cli.command(name='run-api-server')
@@ -222,6 +225,7 @@ def index():
 		user['gender'] = genders[user['gender']]
 		user['birthday'] = dt.datetime.fromtimestamp(user['birthday']).strftime('%d.%m.%Y')
 		return user
+
 	all_users = list(map(repr_user, all_users))
 
 	return render_template('index.html', fields=fields, users=all_users, nums=nums, title='', phrase='')

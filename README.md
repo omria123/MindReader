@@ -20,6 +20,12 @@
 ## Usage
 
 The package implements a pipeline of uploading and processing snapshots from different users.
+To run the pipeline, the user simply needs to run:
+
+
+```shell script
+$ sh scripts/run-pipeline.sh
+```
 
 The package provides the following Interface:
 

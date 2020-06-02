@@ -4,7 +4,7 @@ RUN mkdir -p /usr/src/app/MindReader
 
 WORKDIR MindReader
 
-
+ENV WAITFORIT=1
 COPY ./MindReader/MessageQueue ./MessageQueue
 COPY ./MindReader/Database ./Database
 COPY ./MindReader/IOAccess ./IOAccess
@@ -19,4 +19,4 @@ COPY ./requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 
-CMD ["python" , "-m", "MindReader.saver" , "run-saver", "rabbitmq://pipeline-message-queue:5672", "mongo://pipeline-database:27017"]
+CMD ["python" , "-m", "MindReader.saver" , "run-saver", "rabbitmq://messagequeue:5672", "mongo://database:27017"]

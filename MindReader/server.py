@@ -1,5 +1,7 @@
 import io
 import logging
+import os
+import time
 from pathlib import Path
 
 import click
@@ -17,17 +19,11 @@ logger = logging.getLogger('server')
 # CLI functions
 ###############################
 
-
 @click.group()
-@click.option('--debug', is_flag=True)
-@click.option('--no-logging', is_flag=True)
-def cli(debug, no_logging):
-	utils.logging_level = logging.INFO
-	if debug:
-		utils.logging_level = logging.DEBUG
-
-	if no_logging:
-		logging.disable()
+def cli():
+	if 'WAITFORIT' in os.environ and os.environ['WAITFORIT'] == '1':
+		time.sleep(10)
+	logger.error(os.environ)
 
 
 @cli.command(name='run-server')

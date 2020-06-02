@@ -1,5 +1,8 @@
-import click
 import logging
+import os
+import time
+
+import click
 
 from . import Database, MessageQueue, IOAccess
 from .utils import log_error
@@ -40,7 +43,8 @@ class Saver:
 
 @click.group()
 def cli():
-	pass
+	if 'WAITFORIT' in os.environ and os.environ['WAITFORIT'] == '1':
+		time.sleep(10)
 
 
 @cli.command('save')
