@@ -16,7 +16,7 @@ COPY ./MindReader/saver.py ./
 ENV PYTHONUNBUFFERED=1
 WORKDIR ../
 COPY ./requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir pika pymongo requests wrapt click protobuf
 
 
 CMD ["python" , "-m", "MindReader.saver" , "run-saver", "rabbitmq://messagequeue:5672", "mongo://database:27017"]

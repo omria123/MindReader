@@ -18,7 +18,7 @@ COPY ./MindReader/MessageQueue ./MessageQueue
 ENV PYTHONUNBUFFERED=1
 WORKDIR /usr/src/app
 COPY ./requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install requests flask click matplotlib seaborn wrapt Pillow pika protobuf
 
 
 CMD ["python", "-m", "MindReader.server", "run-server", "rabbitmq://messagequeue:5672", "--data-dir", "/usr/src/app/data", "--host", "0.0.0.0"]

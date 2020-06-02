@@ -18,7 +18,7 @@ COPY ./MindReader/templates ./templates
 ENV PYTHONUNBUFFERED=1
 WORKDIR ../
 COPY ./requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir click requests flask flask-cors wrapt timeago pymongo protobuf
 
 CMD ["python", "-m", "MindReader.api", "run-api-server", "mongo://database:27017", "--host", "0.0.0.0"]
 
