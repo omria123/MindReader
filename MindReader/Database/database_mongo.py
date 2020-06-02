@@ -43,6 +43,8 @@ class MongoDatabase:
 		db = client.db
 		self.client = client
 		self.db = db
+		db.users.create_index([('user_id', pymongo.ASCENDING)], unique=True)
+
 		logger.info(f'Connected to DB {host}:{port}')
 
 	def save(self, name: str, data: dict):
@@ -74,7 +76,7 @@ class MongoDatabase:
 		"""
 		logger.debug('Inserting new user....')
 		users = self.db.users
-		users.insert_one(user)
+		users.update(self.user_identification(user), user, upsert=True)
 		logger.debug('New user inserted')
 
 	def get_users(self):
@@ -135,6 +137,10 @@ class MongoDatabase:
 			'user_id': snapshot['user_id'],
 			'timestamp': snapshot['timestamp'],
 			'snapshot_id': snapshot['snapshot_id']}
+
+	@staticmethod
+	def user_identification(user):
+		return {'user_id': user['user_id']}
 
 	def __str__(self):
 		return f'{self.scheme}://{self.host}:{self.port}'
