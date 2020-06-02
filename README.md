@@ -24,7 +24,7 @@ To run the pipeline, the user simply needs to run:
 
 
 ```shell script
-$ sh scripts/run-pipeline.sh
+$ run-pipeline
 ```
 
 The package provides the following Interface:
@@ -32,6 +32,8 @@ The package provides the following Interface:
 - Client Side
     
     The client side can read a sample from given URL/PATH and upload it to the server.
+    
+    Which in turn feeds the rest of the pipeline. This module is responsible on the system's input source. 
     
     - CLI
     
@@ -107,7 +109,7 @@ The package provides the following Interface:
         For example rabbitmq://127.0.0.1:5672. (The same goes in the future and for DB-URL)
         
         Note: When running parsers together in the same command, all of them works on the same process.
-        (Which is ideally better/fine for one computer or any simple case)
+        (Which is ideally better/fine for one computer or any simple case).
         
         ```shell script
           $ python -m MindReader.parsers parse PATH NAME
