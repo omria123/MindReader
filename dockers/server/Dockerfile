@@ -17,7 +17,6 @@ COPY ./MindReader/MessageQueue ./MessageQueue
 
 ENV PYTHONUNBUFFERED=1
 WORKDIR /usr/src/app
-COPY ./requirements.txt ./
 RUN pip install requests flask click matplotlib seaborn wrapt Pillow pika protobuf
 
 

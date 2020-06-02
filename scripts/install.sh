@@ -11,6 +11,8 @@ function main {
     .env/bin/pip install -r requirements.txt
     cp scripts/run-pipeline.sh .env/bin/run-pipeline
     chmod +x .env/bin/run-pipeline
+    cp scripts/run-build-pipeline.sh .env/bin/run-build-pipeline
+    chmod +x .env/bin/run-build-pipeline
 }
 
 

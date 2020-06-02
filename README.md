@@ -24,7 +24,8 @@ To run the pipeline, the user simply needs to run:
 
 
 ```shell script
-$ run-pipeline
+$ run-build-pipeline # Build all the docker images and run
+$ run-pipeline # Run the already built images 
 ```
 
 The package provides the following Interface:

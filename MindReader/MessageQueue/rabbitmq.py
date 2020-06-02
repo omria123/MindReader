@@ -16,6 +16,8 @@ def refresh_channel(f):
 	@functools.wraps(f)
 	def wrapper(self, *args, **kwargs):
 		self.connection = pika.BlockingConnection(pika.ConnectionParameters(self.host, self.port))
+		if self.connection.is_closed:
+			raise ConnectionError("The message queue isn\'t reachable")
 		self.channel = self.connection.channel()
 		return f(self, *args, **kwargs)
 
@@ -82,8 +84,8 @@ class RabbitMQ:
 		                      properties=pika.BasicProperties(delivery_mode=2))
 		logger.debug('new snapshot published')
 
-	@refresh_channel
 	@publish_json
+	@refresh_channel
 	def publish_result(self, result, channel=None):
 		if channel is None:
 			channel = self.channel

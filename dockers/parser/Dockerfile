@@ -15,7 +15,7 @@ COPY ./MindReader/defaults.py ./
 
 ENV PYTHONUNBUFFERED=1
 WORKDIR ../
-COPY ./requirements.txt ./
-RUN pip install --no-cache-dir pika requests wrapt click matplotlib seaborn Pillow
+
+RUN pip install --no-cache-dir pika requests wrapt click matplotlib seaborn Pillow protobuf
 
 CMD ["python" , "-m", "MindReader.parsers" , "run-parser", "rabbitmq://messagequeue:5672"]
