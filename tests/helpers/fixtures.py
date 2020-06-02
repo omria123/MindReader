@@ -26,6 +26,10 @@ TEST_SERVER_PORT = 5050
 
 @pytest.fixture
 def all_workers(parsers, saver):
+	"""
+	Upon calling, runs each parser and the saver.
+	"""
+
 	def run(mq, db, is_url=True, consume=True):
 		if is_url:
 			mq = MessageQueue.MessageQueue(mq)
@@ -40,6 +44,11 @@ def all_workers(parsers, saver):
 
 @pytest.fixture
 def parsers():
+	"""
+	Upon calling starts each  parser
+	:return:
+	"""
+
 	def run(mq, is_url=True, consume=True):
 		run_parsers(mq, PARSERS.keys(), is_url, consume)
 
@@ -48,6 +57,10 @@ def parsers():
 
 @pytest.fixture()
 def saver():
+	"""
+	Upon calling  starts the saver
+	"""
+
 	def run(mq, db, is_url=True, consume=True):
 		if is_url:
 			mq = MessageQueue.MessageQueue(mq)
@@ -60,6 +73,10 @@ def saver():
 
 @pytest.fixture
 def cli_server(tmp_path):
+	"""
+	Upon calling starts the server
+	"""
+
 	def start(mq_url):
 		run_server(mq_url, start.host, start.port, str(tmp_path))
 
@@ -69,6 +86,10 @@ def cli_server(tmp_path):
 
 @pytest.fixture
 def server():
+	"""
+	Upon calling starts the server
+	"""
+
 	def start(publish_user, publish_snapshot):
 		args = (start.host, start.port, publish_user, publish_snapshot)
 		run_server_publisher(*args)
@@ -79,6 +100,8 @@ def server():
 
 @pytest.fixture
 def mq(request):
+	"""Upon calling starts the mq in docker subprocess"""
+
 	def finalizer():
 		subprocess_call(['docker', 'stop', 'test-mq'], stdout=DEVNULL)
 		subprocess_call(['docker', 'rm', 'test-mq'], stdout=DEVNULL)
@@ -96,6 +119,8 @@ def mq(request):
 
 @pytest.fixture
 def db(request):
+	"""Upon calling starts the db in docker subprocess"""
+
 	def finalizer():
 		subprocess_call(['docker', 'stop', 'test-db'], stdout=DEVNULL)
 		subprocess_call(['docker', 'rm', 'test-db'], stdout=DEVNULL)
@@ -113,6 +138,7 @@ def db(request):
 
 @pytest.fixture
 def api_server(db):
+	"""Starts the api server in subprocess"""
 	Process(target=run_api_server, args=()).start()
 	time.sleep(1)
 
